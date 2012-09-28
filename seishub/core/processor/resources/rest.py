@@ -126,9 +126,10 @@ class RESTResource(Resource):
         U{http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.1}
         for all possible error codes.
         """
-        # global anonymous access allowed
-        if request.env.auth.getUser('anonymous').permissions != 755:
-            self._checkPermissions(request, 755)
+        # XXX: Temporarily disable all access controls...
+        #  # global anonymous access allowed
+        #  if request.env.auth.getUser('anonymous').permissions != 755:
+        #      self._checkPermissions(request, 755)
         data = self.res.document.data
         # ensure we return a UTF-8 encoded string not an Unicode object
         if isinstance(data, unicode):
@@ -172,7 +173,7 @@ class RESTResource(Resource):
         Modifying a document always needs a valid path to a resource or uses a
         user defined mapping.
         """
-        self._checkPermissions(request, 777)
+        # self._checkPermissions(request, 777)
         # SeisHub directory is not directly changeable
         if self.package_id == 'seishub':
             msg = "SeisHub resources may not be modified directly."
@@ -196,7 +197,7 @@ class RESTResource(Resource):
         @see:
         U{http://msdn.microsoft.com/en-us/library/aa142926(EXCHG.65).aspx}
         """
-        self._checkPermissions(request, 777)
+        # self._checkPermissions(request, 777)
         # seishub directory is not directly changeable
         if self.package_id == 'seishub':
             msg = "SeisHub resources may not be moved directly."
@@ -254,7 +255,7 @@ class RESTResource(Resource):
         Deleting a document always needs a valid path to a resource or may use
         a user defined mapping.
         """
-        self._checkPermissions(request, 777)
+        # self._checkPermissions(request, 777)
         # resource in SeisHub directory are not directly removable
         if self.package_id == 'seishub':
             msg = "SeisHub resources may not be deleted directly."

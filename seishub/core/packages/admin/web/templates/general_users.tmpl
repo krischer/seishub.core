@@ -34,17 +34,17 @@
   <div class="field">
     <label>Permissions</label><br />
     <select name="permissions">
-      <option value="777" 
+      <option value="777"
         #if $permissions==777
         selected="selected"
         #end if
         >RW</option>
-      <option value="755" 
+      <option value="755"
         #if $permissions==755
         selected="selected"
         #end if
         >R-</option>
-      <option value="700" 
+      <option value="700"
         #if $permissions==700
         selected="selected"
         #end if
@@ -103,18 +103,18 @@
     <label>Permissions</label><br />
     <select name="permissions">
 #if $id!='anonymous'
-      <option value="777" 
+      <option value="777"
         #if $permissions==777
         selected="selected"
         #end if
         >RW</option>
-#end if        
-      <option value="755" 
+#end if
+      <option value="755"
         #if $permissions==755
         selected="selected"
         #end if
         >R-</option>
-      <option value="700" 
+      <option value="700"
         #if $permissions==700
         selected="selected"
         #end if
@@ -138,47 +138,37 @@
   <table class="list">
     <tr>
       <th></th>
-      <th>User ID</th>
-      <th>User UID</th>
-      <th>Name</th>
+      <th>ID</th>
+      <th>User Name</th>
+      <th>Real Name</th>
       <th>E-Mail</th>
       <th>Institution</th>
-      <th>Global Permissions</th>
+      <th>Groups</th>
     </tr>
     #for $user in $users
-    <tr> 
+    <tr>
       <td>
-        <input type="radio" name="id" value="$user.id" />
-      </td> 
+        <input type="radio" name="id" value="$user.user_name" />
+      </td>
       <td>$user.id</td>
-      <td>$user.uid</td>
-      <td>$user.name</td>
+      <td>$user.user_name</td>
+      <td>$user.real_name</td>
       <td>
         #if $user.email
         <a href="mailto:$user.email">$user.email</a>
         #end if
       </td>
       <td>$user.institution</td>
-      <td>
-        #if $user.permissions==777
-        RW
-        #elif $user.permissions==755
-        R-
-        #elif $user.permissions==700
-        -
-        #else
-        Unknown ($user.permissions)
-        #end if
-      </td>
+      <td>$user.groups</td>
     </tr>
     #end for
   </table>
-  
+
   <div class="button">
     <input type="submit" name="add-user" value="Add" />
     <input type="submit" name="edit-user" value="Edit" />
     <input type="submit" name="delete" value="Delete"
-           onclick="return confirm('Are you sure you want to delete?')" />
+        onclick="return confirm('Are you sure you want to delete the user?')" />
   </div>
 </form>
 #end if

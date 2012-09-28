@@ -2,8 +2,7 @@
 
 from seishub.core.config import IntOption, Option
 from seishub.core.defaults import MIN_PASSWORD_LENGTH
-from seishub.core.exceptions import NotFoundError, DuplicateObjectError, \
-    SeisHubError
+from seishub.core.exceptions import DuplicateObjectError, SeisHubError
 from seishub.core.util.text import hash
 from sqlalchemy import Column, String, create_engine, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -11,7 +10,6 @@ from sqlalchemy.orm import sessionmaker
 from twisted.cred import checkers, credentials, error
 from twisted.internet import defer
 from zope.interface import implements
-import os
 
 
 class PasswordDictChecker:
@@ -48,29 +46,74 @@ Base = declarative_base()
 class User(Base):
     """
     A user object.
+
+    Every user has the following attributes:
+        id:            Unique id number. Can never be changed.
+        user_name:     The user's name used inside SeisHub. Can be changed.
+        password_hash: Password hash.
+        real_name:     The user's true name.
+        groups:        A list of all groups the user is a member of.
+        institution:   The user's institution.
+        email:         The user's email.
     """
     __tablename__ = 'users'
 
-    id = Column(String, primary_key=True)
-    uid = Column(Integer)
-    name = Column(String)
-    password = Column(String)
+    id = Column(Integer, primary_key=True)
+    user_name = Column(String)
+    password_hash = Column(String)
+    real_name = Column(String)
+    groups = Column(String)
     institution = Column(String)
     email = Column(String)
-    permissions = Column(Integer)
 
-    def __init__(self, id, name, password, uid=1000, institution='', email='',
-                 permissions=755):
-        self.id = id
-        self.uid = uid
-        self.name = name
-        self.password = password
+    def __init__(self, user_name, password_hash, real_name, institution='',
+        email=''):
+        self.user_name = self.user_name
+        self.password_hash = password_hash
+        self.real_name = real_name
+        # Two special user names. 'admin' can do everything and will be part of
+        # group 'admin', whereas 'anonymous' is not part of a group and will
+        # only be able to read resources with the 'public' flag set to True.
+        if user_name == "admin":
+            self.groups = ["admin"]
+        elif user_name == "anonymous":
+            self.groups = []
+        else:
+            # Every user is at least in the group 'users'.
+            self.groups = ["users"]
         self.institution = institution
         self.email = email
-        self.permissions = permissions
 
     def __repr__(self):
-        return "<User %s(%d): '%s')>" % (self.id, self.uid, self.name)
+        return "<User %s(%s), member of groups: %s>" % (self.user_name,
+            self.real_name, self.groups)
+
+
+class Group(Base):
+    """
+    A group object.
+
+    Every group has the following attributes:
+        id:          Unique id number. Can never be changed.
+        group_name:  The group name.
+        group_owner: The group owner. Only the owner can add new members.
+        description: Extended description.
+    """
+    __tablename__ = 'groups'
+
+    id = Column(Integer, primary_key=True)
+    group_name = Column(String)
+    group_owner = Column(String)
+    description = Column(String)
+
+    def __init__(self, group_name, group_owner, description=""):
+        self.group_name = group_name
+        self.group_owner = group_owner
+        self.description = description
+
+    def __repr__(self):
+        return "<Group %s (owner: %s): %s)>" % (self.group_name,
+            self.group_owner, self.description)
 
 
 class AuthenticationManager(object):
@@ -87,32 +130,34 @@ class AuthenticationManager(object):
     def __init__(self, env):
         self.env = env
         # fetch db uri - this is an option primary for the test cases
-        uri = self.env.config.get('seishub', 'auth_uri') or \
-            'sqlite:///' + os.path.join(self.env.getInstancePath(), 'db',
-                                        'auth.db')
+        uri = self.env.config.get('seishub', 'auth_uri')  # or \
+            #'sqlite:///' + os.path.join(self.env.getInstancePath(), 'db',
+                                        #'auth.db')
         engine = create_engine(uri, encoding='utf-8', convert_unicode=True)
         # Define and create user table
         Base.metadata.create_all(engine, checkfirst=True)
         self.Session = sessionmaker(bind=engine)
         self.refresh()
+        # Groups 'admin' and 'users' should always exist.
+        if not "admin" in self.groups:
+            self.addGroup(group_name="admin", group_owner="admin",
+                description="Users in this group have admin rights.")
+        if not "users" in self.groups:
+            self.addGroup(group_name="users", group_owner="admin",
+                description="Default group for all users.")
         # add admin if no account exists and check for the default password
-        if not self.users:
+        if "admin" not in self.users.keys():
             self.env.log.warn("An administrative account with both username "
                               "and passwort 'admin' has been automatically "
                               "created. You should change the password as "
                               "soon as possible.")
-            self.addUser(id='admin', name='Administrator', password='admin',
-                         uid=100, permissions=777, checkPassword=False)
+            self.addUser(user_name='admin', password="admin",
+                         real_name='Administrator', checkPassword=False)
         elif self.checkPassword('admin', 'admin'):
             self.env.log.warn("The administrative account is accessible via "
                               "the standard password! Please change this as "
                               "soon as possible!")
-        # check for anonymous user and create it if it not exists
-        try:
-            self.getUser('anonymous')
-        except:
-            self.addUser(id='anonymous', name='Anonymous', password='',
-                         uid=101, permissions=755, checkPassword=False)
+        self.refresh()
 
     def _validatePassword(self, password):
         """
@@ -122,18 +167,17 @@ class AuthenticationManager(object):
         if len(password) < min_length:
             raise SeisHubError("Password is way too short!")
 
-    def addUser(self, id, name, password, uid=1000, institution='', email='',
-                permissions=755, checkPassword=True):
+    def addUser(self, user_name, password, real_name, institution='', email='',
+                checkPassword=True):
         """
         Adds an user.
         """
-        if id in self.passwords:
+        if user_name in self.users.keys():
             raise DuplicateObjectError("User already exists!")
         if checkPassword:
             self._validatePassword(password)
-        user = User(id=id, uid=uid, name=name, password=hash(password),
-                    institution=institution, email=email,
-                    permissions=permissions)
+        user = User(user_name=user_name, password_hash=hash(password),
+                    real_name=real_name, institution=institution, email=email)
         session = self.Session()
         session.add(user)
         try:
@@ -143,89 +187,104 @@ class AuthenticationManager(object):
             raise SeisHubError(str(e))
         self.refresh()
 
-    def checkPassword(self, id, password):
+    def addGroup(self, group_name, group_owner, description=""):
         """
-        Check current password.
+        Adds a new group. Should be self-explanatory.
         """
-        if id not in self.passwords:
-            raise SeisHubError("User does not exists!")
-        return self.passwords[id] == hash(password)
-
-    def checkPasswordHash(self, id, hash):
-        """
-        Check current password hash.
-        """
-        if id not in self.passwords:
-            raise SeisHubError("User does not exists!")
-        return self.passwords[id] == hash
-
-    def changePassword(self, id, password):
-        """
-        Modifies only the user password.
-        """
-        self.updateUser(id, password=password)
-
-    def getUser(self, id):
-        if id not in self.passwords:
-            raise SeisHubError("User does not exists!")
+        if group_name in self.groups.keys():
+            raise DuplicateObjectError("Group already exists!")
+        group = Group(group_name=group_name, group_owner=group_owner,
+                      description=description)
         session = self.Session()
-        return session.query(User).filter_by(id=id).one()
+        session.add(group)
+        try:
+            session.commit()
+        except Exception, e:
+            session.rollback()
+            raise SeisHubError(str(e))
+        self.refresh()
 
-    def updateUser(self, id, name='', password='', uid=1000, institution='',
-                   email='', permissions=755):
+    def checkPassword(self, user_name, password):
         """
-        Modifies user information.
+        Check a user's password.
         """
-        if id not in self.passwords:
+        return self.checkPasswordHash(user_name, hash(password))
+
+    def checkPasswordHash(self, user_name, password_hash):
+        """
+        Check a user's password hash.
+        """
+        user = self.getUser(user_name)
+        return user.password_hash == password_hash
+
+    def changePassword(self, user_name, password):
+        """
+        Change a user's password.
+        """
+        self.updateUser(user_name, password_hash=hash(password))
+
+    def getUser(self, user_name):
+        """
+        Returns the User instance of one user.
+        """
+        if user_name not in self.users.keys():
             raise SeisHubError("User does not exists!")
+        return self.users[user_name]
+
+    def updateUser(self, user_name, new_user_name=None, password_hash=None,
+        real_name=None, institution=None, email=None):
+        """
+        Modifies user information. Should be self-explanatory.
+        """
+        user = self.getUser(user_name)
+        if new_user_name:
+            user.user_name = new_user_name
+        if password_hash:
+            user.password_hash = password_hash
+        if real_name:
+            user.real_name = real_name
+        if institution:
+            user.institution = institution
+        if email:
+            user.email = email
+        # Add the updated user to the session.
         session = self.Session()
-        user = session.query(User).filter_by(id=id).one()
-        user.name = name
-        if password:
-            self._validatePassword(password)
-            user.password = hash(password)
-        user.institution = institution
-        user.email = email
-        user.uid = uid
-        user.permissions = permissions
         session.add(user)
         try:
             session.commit()
-        except:
+        except Exception, e:
             session.rollback()
+            raise SeisHubError(str(e))
         self.refresh()
 
-    def deleteUser(self, id):
+    def deleteUser(self, user_name):
         """
-        Deletes a user.
+        Deletes a user with a given user name.
         """
-        if id not in self.passwords:
-            raise NotFoundError("User does not exists!")
+        user = self.getUser(user_name)
         session = self.Session()
-        user = session.query(User).filter_by(id=id).one()
         session.delete(user)
         try:
             session.commit()
-        except:
+        except Exception, e:
             session.rollback()
+            raise SeisHubError(str(e))
         self.refresh()
 
     def refresh(self):
         """
-        Refreshes the internal list of users and passwords from database.
+        Refreshes the internal list of users and groups.
         """
         session = self.Session()
-        passwords = {}
-        users = []
-        for user in session.query(User).order_by(User.name).all():
-            passwords[user.id] = user.password
-            users.append(user)
-        self.users = users
-        self.passwords = passwords
+        self.users = {}
+        for user in session.query(User).all():
+            self.users[user.user_name] = user
+        self.groups = {}
+        for group in session.query(Group).all():
+            self.groups[group.group_name] = group
 
     def getCheckers(self):
         """
         Returns a tuple of checkers used by Twisted portal objects.
         """
-        self.refresh()
         return (PasswordDictChecker(self.env),)
