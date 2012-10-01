@@ -1,0 +1,85 @@
+<h1>Groups</h1>
+
+#if $action=='add'
+<h2>Add a new group to this SeisHub instance.</h2>
+<form method="post" id="add" action="">
+  <div class="field">
+    <label>Group Name</label><br />
+    <input type="text" size="20" name="group_name" value="$group_name" />
+  </div>
+  <div class="field">
+    <label>Group Owner</label><br />
+    <input type="text" size="20" name="group_owner" value="$group_owner" />
+  </div>
+  <div class="field">
+    <label>Description</label><br />
+    <input type="text" size="100" name="description" value="$description" />
+  </div>
+  <div class="button">
+    <input type="submit" name="add" value="Add" />
+    <input type="submit" name="cancel" value="Cancel" />
+  </div>
+</form>
+
+<br />
+<br />
+#end if
+
+#if $action=='edit'
+<h2>Edit group $old_group_name</h2>
+<form method="post" id="add" action="">
+  <input type="hidden" name="old_group_name" value="$old_group_name" />
+  <div class="field">
+    <label>Group Name</label><br />
+    <input type="text" size="20" name="group_name" value="$group_name" />
+  </div>
+  <div class="field">
+    <label>Group Owner</label><br />
+    <input type="text" size="20" name="group_owner" value="$group_owner" />
+  </div>
+  <div class="field">
+    <label>Description</label><br />
+    <input type="text" size="100" name="description" value="$description" />
+  </div>
+  <div class="button">
+    <input type="submit" name="edit" value="Submit" />
+    <input type="submit" name="cancel" value="Cancel" />
+  </div>
+</form>
+
+<br />
+<br />
+#end if
+
+#if not $action
+<h2>List of all groups</h2>
+<form method="post" id="list" action="">
+  <table class="list">
+    <tr>
+      <th></th>
+      <th>ID</th>
+      <th>Group Name</th>
+      <th>Group Owner</th>
+      <th>Description</th>
+    </tr>
+    #for $group in $groups
+    <tr>
+      <td>
+        <input type="radio" name="group_name" value="$group.group_name" />
+      </td>
+      <td>$group.id</td>
+      <td>$group.group_name</td>
+      <td>$group.group_owner</td>
+      <td>$group.description</td>
+    </tr>
+    #end for
+  </table>
+
+  <div class="button">
+    <input type="submit" name="add-group" value="Add" />
+    <input type="submit" name="edit-group" value="Edit" />
+    <input type="submit" name="delete" value="Delete"
+        onclick="return confirm('Are you sure you want to delete the group?')" />
+  </div>
+</form>
+#end if

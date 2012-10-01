@@ -110,17 +110,18 @@ class WebRequest(Processor, http.Request):
         # XXX: all or nothing - only authenticated are allowed to access
         # should be replaced with a much finer mechanism
         # URL, role and group based
-        if not IAdminResource.providedBy(result) and \
-           self.env.auth.getUser('anonymous').permissions == 755:
-            # skip for non administrative resources and allow anonymous access
-            # if permission are set
-            pass
-        elif not result.public and not self.isAuthenticatedUser():
-            self.authenticate()
-            return
+        # XXX: Do something else here!
+        ##  if not IAdminResource.providedBy(result) and \
+        ##     self.env.auth.getUser('anonymous').permissions == 755:
+        ##      # skip for non administrative resources and allow anonymous access
+        ##      # if permission are set
+        ##      pass
+        ##  elif not result.public and not self.isAuthenticatedUser():
+        ##      self.authenticate()
+        ##      return
         # check result and either render direct or in thread
         if IFileSystemResource.providedBy(result):
-            # file system resources render direct 
+            # file system resources render direct
             data = result.render(self)
             if result.folderish:
                 # check for default page
@@ -252,7 +253,7 @@ class WebRequest(Processor, http.Request):
     def _renderResource(self, data=''):
         """
         Renders a resource.
-        
+
         @param data: content of the document to be rendered
         @return:     None
         """
@@ -280,7 +281,7 @@ class WebRequest(Processor, http.Request):
     def _renderFolder(self, children={}):
         """
         Renders a folderish resource.
-        
+
         @param children: dict of child objects implementing L{IResource}
         @return:         None
         """
@@ -352,10 +353,10 @@ class WebRequest(Processor, http.Request):
     def notifyFinish(self):
         """
         Notify when finishing the request
-        
-        @return: A deferred. The deferred will be triggered when the request 
-            is finished -- with a C{None} value if the request finishes 
-            successfully or with an error if the request is stopped by the 
+
+        @return: A deferred. The deferred will be triggered when the request
+            is finished -- with a C{None} value if the request finishes
+            successfully or with an error if the request is stopped by the
             client.
         """
         self.notifications.append(defer.Deferred())
@@ -416,7 +417,7 @@ class HTTPSService(SSLServer):
     def _getCertificates(self):
         """
         Fetch HTTPS certificate paths from configuration.
-        
+
         return: Paths to pkey and cert files.
         """
         pkey_file = self.env.config.get('web', 'https_pkey_file')
@@ -438,7 +439,7 @@ class HTTPSService(SSLServer):
     def _generateCertificates(self):
         """
         Generates new self-signed certificates.
-        
+
         return: Paths to pkey and cert files.
         """
         from seishub.core.util import certgen

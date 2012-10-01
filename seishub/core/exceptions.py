@@ -8,11 +8,11 @@ class SeisHubError(Exception):
     The general SeisHub error class.
     """
     code = None
-    
+
     def __init__(self, *args, **kwargs):
         """
         @keyword message: error message
-        @type message: str 
+        @type message: str
         @keyword code: http error code
         @type code: int
         """
@@ -23,13 +23,13 @@ class SeisHubError(Exception):
         code = kwargs.pop('code', http.INTERNAL_SERVER_ERROR)
         self.code = self.code or code
         Exception.__init__(self, *args, **kwargs)
-    
-    def _get_message(self): 
+
+    def _get_message(self):
         return self._message
-    
-    def _set_message(self, message): 
+
+    def _set_message(self, message):
         self._message = message
-    
+
     message = property(_get_message, _set_message)
 
 
@@ -64,14 +64,14 @@ class InvalidParameterError(SeisHubError):
 class ForbiddenError(SeisHubError):
     """
     Returns HTTP Status Code 403: Forbidden.
-    
-    The server understood the request, but is refusing to fulfill it. 
-    Authorization will not help and the request SHOULD NOT be repeated. If 
-    the request method was not HEAD and the server wishes to make public why 
-    the request has not been fulfilled, it SHOULD describe the reason for the 
-    refusal in the entity. If the server does not wish to make this 
-    information available to the client, the status code 404 (Not Found) can 
-    be used instead. 
+
+    The server understood the request, but is refusing to fulfill it.
+    Authorization will not help and the request SHOULD NOT be repeated. If
+    the request method was not HEAD and the server wishes to make public why
+    the request has not been fulfilled, it SHOULD describe the reason for the
+    refusal in the entity. If the server does not wish to make this
+    information available to the client, the status code 404 (Not Found) can
+    be used instead.
     """
     code = http.FORBIDDEN
 
@@ -79,26 +79,26 @@ class ForbiddenError(SeisHubError):
 class NotImplementedError(SeisHubError):
     """
     Returns HTTP Status Code 501: Not Implemented.
-    
-    The server does not support the functionality required to fulfill the 
-    request. This is the appropriate response when the server does not 
-    recognize the request method and is not capable of supporting it for any 
+
+    The server does not support the functionality required to fulfill the
+    request. This is the appropriate response when the server does not
+    recognize the request method and is not capable of supporting it for any
     resource.
-    """ 
+    """
     code = http.NOT_IMPLEMENTED
 
 
 class NotAllowedError(SeisHubError):
     """
     Returns HTTP Status Code 405: Method Not Allowed.
-    
-    The method specified in the Request-Line is not allowed for the resource 
-    identified by the Request-URI. The response MUST include an Allow header 
+
+    The method specified in the Request-Line is not allowed for the resource
+    identified by the Request-URI. The response MUST include an Allow header
     containing a list of valid methods for the requested resource.
     """
     code = http.NOT_ALLOWED
     allowed_methods = ()
-    
+
     def __init__(self, allowed_methods=(), *args, **kwargs):
         self.allowed_methods = allowed_methods
         SeisHubError.__init__(self, *args, **kwargs)

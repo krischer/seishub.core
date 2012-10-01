@@ -2,7 +2,8 @@
 
 from seishub.core.config import IntOption, Option
 from seishub.core.defaults import MIN_PASSWORD_LENGTH
-from seishub.core.exceptions import DuplicateObjectError, SeisHubError
+from seishub.core.exceptions import DuplicateObjectError, SeisHubError, \
+    InvalidParameterError
 from seishub.core.util.text import hash
 from sqlalchemy import Column, String, create_engine, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -10,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from twisted.cred import checkers, credentials, error
 from twisted.internet import defer
 from zope.interface import implements
+import os
 
 
 class PasswordDictChecker:
@@ -66,21 +68,12 @@ class User(Base):
     institution = Column(String)
     email = Column(String)
 
-    def __init__(self, user_name, password_hash, real_name, institution='',
-        email=''):
-        self.user_name = self.user_name
+    def __init__(self, user_name, password_hash, real_name, groups,
+        institution='', email=''):
+        self.user_name = user_name
         self.password_hash = password_hash
         self.real_name = real_name
-        # Two special user names. 'admin' can do everything and will be part of
-        # group 'admin', whereas 'anonymous' is not part of a group and will
-        # only be able to read resources with the 'public' flag set to True.
-        if user_name == "admin":
-            self.groups = ["admin"]
-        elif user_name == "anonymous":
-            self.groups = []
-        else:
-            # Every user is at least in the group 'users'.
-            self.groups = ["users"]
+        self.groups = ", ".join(groups)
         self.institution = institution
         self.email = email
 
@@ -130,9 +123,9 @@ class AuthenticationManager(object):
     def __init__(self, env):
         self.env = env
         # fetch db uri - this is an option primary for the test cases
-        uri = self.env.config.get('seishub', 'auth_uri')  # or \
-            #'sqlite:///' + os.path.join(self.env.getInstancePath(), 'db',
-                                        #'auth.db')
+        uri = self.env.config.get('seishub', 'auth_uri') or \
+            'sqlite:///' + os.path.join(self.env.getInstancePath(), 'db',
+                                        'auth.db')
         engine = create_engine(uri, encoding='utf-8', convert_unicode=True)
         # Define and create user table
         Base.metadata.create_all(engine, checkfirst=True)
@@ -152,7 +145,8 @@ class AuthenticationManager(object):
                               "created. You should change the password as "
                               "soon as possible.")
             self.addUser(user_name='admin', password="admin",
-                         real_name='Administrator', checkPassword=False)
+                         groups=["admin", "users"], real_name='Administrator',
+                         checkPassword=False)
         elif self.checkPassword('admin', 'admin'):
             self.env.log.warn("The administrative account is accessible via "
                               "the standard password! Please change this as "
@@ -167,8 +161,8 @@ class AuthenticationManager(object):
         if len(password) < min_length:
             raise SeisHubError("Password is way too short!")
 
-    def addUser(self, user_name, password, real_name, institution='', email='',
-                checkPassword=True):
+    def addUser(self, user_name, password, real_name, groups, institution='',
+                email='', checkPassword=True):
         """
         Adds an user.
         """
@@ -176,8 +170,14 @@ class AuthenticationManager(object):
             raise DuplicateObjectError("User already exists!")
         if checkPassword:
             self._validatePassword(password)
+        # Check if all groups exists.
+        for group in groups:
+            if not group in self.groups.keys():
+                msg = "Group '%s' does not exists." % group
+                raise SeisHubError(msg)
         user = User(user_name=user_name, password_hash=hash(password),
-                    real_name=real_name, institution=institution, email=email)
+                    real_name=real_name, groups=groups,
+                    institution=institution, email=email)
         session = self.Session()
         session.add(user)
         try:
@@ -185,6 +185,8 @@ class AuthenticationManager(object):
         except Exception, e:
             session.rollback()
             raise SeisHubError(str(e))
+        print "Added user!"
+        session.close()
         self.refresh()
 
     def addGroup(self, group_name, group_owner, description=""):
@@ -193,6 +195,8 @@ class AuthenticationManager(object):
         """
         if group_name in self.groups.keys():
             raise DuplicateObjectError("Group already exists!")
+        # Do not check if the group owner exists! This is necessary because
+        # groups can be created before any users exist!
         group = Group(group_name=group_name, group_owner=group_owner,
                       description=description)
         session = self.Session()
@@ -202,7 +206,61 @@ class AuthenticationManager(object):
         except Exception, e:
             session.rollback()
             raise SeisHubError(str(e))
+        session.close()
         self.refresh()
+
+    def updateGroup(self, group_name, new_group_name=None, group_owner=None,
+                    description=None):
+        """
+        Updates an already existing group.
+        """
+        if new_group_name and group_name != new_group_name and \
+           new_group_name in self.groups.keys():
+            raise DuplicateObjectError("Group %s already exists!" %
+                                       new_group_name)
+        # Only allow existing users to be group owners.
+        if group_owner and group_owner not in self.users.keys():
+            raise SeisHubError("User %s does not exists." % group_owner)
+        # Get the group, update it and write it to the database.
+        group = self.getGroup(group_name)
+        if new_group_name:
+            group.group_name = new_group_name
+        if group_owner:
+            group.group_owner = group_owner
+        if description:
+            group.description = description
+        session = self.Session()
+        session.add(group)
+        try:
+            session.commit()
+        except Exception, e:
+            session.rollback()
+            raise SeisHubError(str(e))
+        session.close()
+        self.refresh()
+
+    def deleteGroup(self, group_name):
+        """
+        Deletes a group. Should be self-explanatory.
+        """
+        group = self.getGroup(group_name)
+        session = self.Session()
+        session.delete(group)
+        try:
+            session.commit()
+        except Exception, e:
+            session.rollback()
+            raise SeisHubError(str(e))
+        session.close()
+        self.refresh()
+
+    def getGroup(self, group_name):
+        """
+        Returns the Group instance of one user.
+        """
+        if group_name not in self.groups.keys():
+            raise SeisHubError("Group %s does not exists!" % group_name)
+        return self.groups[group_name]
 
     def checkPassword(self, user_name, password):
         """
@@ -221,32 +279,40 @@ class AuthenticationManager(object):
         """
         Change a user's password.
         """
-        self.updateUser(user_name, password_hash=hash(password))
+        self.updateUser(user_name, password=password)
 
     def getUser(self, user_name):
         """
         Returns the User instance of one user.
         """
         if user_name not in self.users.keys():
-            raise SeisHubError("User does not exists!")
+            raise SeisHubError("User %s does not exists!" % user_name)
         return self.users[user_name]
 
-    def updateUser(self, user_name, new_user_name=None, password_hash=None,
-        real_name=None, institution=None, email=None):
+    def updateUser(self, user_name, new_user_name=None, password=None,
+        real_name=None, groups=None, institution=None, email=None):
         """
         Modifies user information. Should be self-explanatory.
         """
+        if password:
+            self._validatePassword(password)
         user = self.getUser(user_name)
         if new_user_name:
             user.user_name = new_user_name
-        if password_hash:
-            user.password_hash = password_hash
+        if password:
+            user.password_hash = hash(password)
         if real_name:
             user.real_name = real_name
         if institution:
             user.institution = institution
         if email:
             user.email = email
+        if groups:
+            for group in groups:
+                if not group in self.groups.keys():
+                    msg = "Group '%s' does not exists." % group
+                    raise SeisHubError(msg)
+            user.groups = ", ".join(groups)
         # Add the updated user to the session.
         session = self.Session()
         session.add(user)
@@ -255,6 +321,7 @@ class AuthenticationManager(object):
         except Exception, e:
             session.rollback()
             raise SeisHubError(str(e))
+        session.close()
         self.refresh()
 
     def deleteUser(self, user_name):
@@ -269,6 +336,7 @@ class AuthenticationManager(object):
         except Exception, e:
             session.rollback()
             raise SeisHubError(str(e))
+        session.close()
         self.refresh()
 
     def refresh(self):
@@ -282,6 +350,7 @@ class AuthenticationManager(object):
         self.groups = {}
         for group in session.query(Group).all():
             self.groups[group.group_name] = group
+        session.close()
 
     def getCheckers(self):
         """
