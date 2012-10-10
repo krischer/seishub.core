@@ -371,7 +371,7 @@ class Authorization(object):
     """
     Object dealing with the authorization of resources. It is meant to be
     attached to a resource object and stores the owner, the group and the
-    permissions for owner/group/others for the parent object.
+    permissions for owner/group/other for the parent object.
 
     The permission model is modelled after the Unix file system and is a three
     digit octal code with the same meaning.
@@ -379,6 +379,10 @@ class Authorization(object):
     def __init__(self, owner="admin", group="admin", permissions="660",
         public=False):
         """
+        The empty constructor only gives rights to admins. This is only a dummy
+        authorization object as admins have all rights anyways. At the same
+        time this is the safe solution in case someone forgets to set
+        permissions somewhere.
         """
         self._read_actions = ["r", "read"]
         self._write_actions = ["w", "write"]
@@ -398,15 +402,17 @@ class Authorization(object):
         # If public read access is True, return True.
         if self.public is True and action in self._read_actions:
             return True
-        # User and the groups of the user needs to be given.
-        if user is None or user_groups is None:
+        # User or the groups of the user needs to be given.
+        if user is None and user_groups is None:
             return False
+        if isinstance(user_groups, basestring):
+            user_groups = [user_groups]
         # Determine owner and group membership.
-        if user == self.owner:
+        if user and user == self.owner:
             user_is_owner = True
         else:
             user_is_owner = False
-        if self.group in user_groups:
+        if user_groups and self.group in user_groups:
             user_in_group = True
         else:
             user_in_group = False
@@ -417,16 +423,16 @@ class Authorization(object):
             if user_in_group and self._group_rights & 4:
                 return True
             if user_is_owner is False and user_in_group is False and \
-                self._others_righths & 4:
+                self._other_rights & 4:
                 return True
         # Check write actions. Bitwise and with 2 has to not be 0!
-        elif action in self._writer_actions:
+        elif action in self._write_actions:
             if user_is_owner and self._owner_rights & 2:
                 return True
             if user_in_group and self._group_rights & 2:
                 return True
             if user_is_owner is False and user_in_group is False and \
-                self._others_righths & 2:
+                self._other_rights & 2:
                 return True
         return False
 
@@ -452,13 +458,29 @@ class Authorization(object):
         Other combinations are possible but likely do not make much sense.
         """
         return "%i%i%i" % (self._owner_rights, self._group_rights,
-            self._others_rights)
+            self._other_rights)
 
     @permissions.setter
     def permissions(self, value):
-        if len(value) != 3 or not isinstance(value, basestring):
+        if not isinstance(value, basestring) or len(value) != 3 or \
+            not value.isdigit() or int(value) < 0:
             msg = "Permission needs to be a three digit string."
             raise SeisHubError(msg)
         self._owner_rights = int(value[0])
         self._group_rights = int(value[1])
-        self._others_rights = int(value[2])
+        self._other_rights = int(value[2])
+
+    def __str__(self):
+        ret_val = ("Authorization object - owner: '{owner}', Group: '{group}',"
+            " Permissions: '{permissions}', Public Read Access: {public}")
+        return ret_val.format(
+            owner=self.owner,
+            group=self.group,
+            permissions="%s%s%s%s%s%s" % (
+                "r" if self._owner_rights & 4 else "-",
+                "w" if self._owner_rights & 2 else "-",
+                "r" if self._group_rights & 4 else "-",
+                "w" if self._group_rights & 2 else "-",
+                "r" if self._other_rights & 4 else "-",
+                "w" if self._other_rights & 2 else "-",),
+            public=str(self.public))
