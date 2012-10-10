@@ -26,7 +26,7 @@ class BasicPanel(Component):
 
     template = 'templates' + os.sep + 'general_basic.tmpl'
     panel_ids = ('admin', 'General', 'basic', 'Basic Settings')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):
         data = {
@@ -72,7 +72,7 @@ class DatabasePanel(Component):
 
     template = 'templates' + os.sep + 'general_database.tmpl'
     panel_ids = ('admin', 'General', 'database', 'Database')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):
         db = self.db
@@ -128,7 +128,7 @@ class ConfigPanel(Component):
 
     template = 'templates' + os.sep + 'general_config.tmpl'
     panel_ids = ('admin', 'General', 'ini', 'seishub.ini')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):  # @UnusedVariable
         data = {}
@@ -149,7 +149,7 @@ class LogsPanel(Component):
 
     template = 'templates' + os.sep + 'general_logs.tmpl'
     panel_ids = ('admin', 'General', 'logs', 'Logs')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):  # @UnusedVariable
         log_file = os.path.join(self.env.getInstancePath(), 'logs',
@@ -175,7 +175,7 @@ class GroupsPanel(Component):
 
     template = 'templates' + os.sep + 'general_groups.tmpl'
     panel_ids = ('admin', 'General', 'groups', 'Groups')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):
         data = {}
@@ -351,7 +351,7 @@ class UsersPanel(Component):
 
     template = 'templates' + os.sep + 'general_users.tmpl'
     panel_ids = ('admin', 'General', 'users', 'Users')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):
         data = {}
@@ -552,7 +552,7 @@ class PluginsPanel(Component):
 
     template = 'templates' + os.sep + 'general_plugins.tmpl'
     panel_ids = ('admin', 'General', 'plug-ins', 'Plug-ins')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):
         error = None
@@ -640,7 +640,7 @@ class ServicesPanel(Component):
 
     template = 'templates' + os.sep + 'general_services.tmpl'
     panel_ids = ('admin', 'General', 'services', 'Services')
-    has_roles = ['SEISHUB_ADMIN']
+    #has_roles = ['SEISHUB_ADMIN']
 
     def render(self, request):
         if request.method == 'POST':

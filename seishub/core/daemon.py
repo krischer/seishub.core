@@ -2,9 +2,9 @@
 The SeisHub Daemon: platform-independent interface.
 """
 from seishub.core.env import Environment
-from seishub.core.services.manhole import ManholeService
-from seishub.core.services.sftp import SFTPService
-from seishub.core.services.ssh import SSHService
+#from seishub.core.services.manhole import ManholeService
+#from seishub.core.services.sftp import SFTPService
+#from seishub.core.services.ssh import SSHService
 from seishub.core.services.web import WebService
 from twisted.application import service
 from twisted.python import usage
@@ -23,9 +23,9 @@ def createApplication(path, log_file=None, create=False):
                       create=create)
     # add services
     WebService(env)
-    SSHService(env)
-    ManholeService(env)
-    SFTPService(env)
+    #SSHService(env)
+    #ManholeService(env)
+    #SFTPService(env)
     #HeartbeatService(env)
     return application
 
@@ -39,7 +39,8 @@ class SeisHubApplicationRunner(_SomeApplicationRunner):
         self.config = config
 
     def createOrGetApplication(self):
-        return createApplication(self.config.get('rundir'), self.log_file)
+        app = createApplication(self.config.get('rundir'), self.log_file)
+        return app
 
 
 def run():

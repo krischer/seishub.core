@@ -36,7 +36,7 @@ class ConfigurationError(SeisHubError):
 class Configuration(object):
     """
     Thin layer over `ConfigParser` from the Python standard library.
-    
+
     In addition to providing some convenience methods, the class remembers
     the last modification time of the configuration file, and reparses it
     when the file has changed.
@@ -72,7 +72,7 @@ class Configuration(object):
     def getbool(self, section, name, default=None):
         """
         Return the specified option as boolean value.
-        
+
         If the value of the option is one of "yes", "true",  "on", or "1", this
         method will return `True`, otherwise `False`.
         """
@@ -81,7 +81,7 @@ class Configuration(object):
     def getint(self, section, name, default=None):
         """
         Return the value of the specified option as integer.
-        
+
         If the specified option can not be converted to an integer, a
         `ConfigurationError` exception is raised.
         """
@@ -91,7 +91,7 @@ class Configuration(object):
         """
         Return a list of values that have been specified as a single
         comma-separated option.
-        
+
         A different separator can be specified using the `sep` parameter. If
         the `keep_empty` parameter is set to `True`, empty elements are
         included in the list.
@@ -101,7 +101,7 @@ class Configuration(object):
     def set(self, section, name, value):
         """
         Change a configuration value.
-        
+
         These changes are not persistent unless saved with `save()`.
         """
         self[section].set(name, value)
@@ -119,7 +119,7 @@ class Configuration(object):
         """
         Return a list of `(name, value)` tuples for every option in the
         specified section.
-        
+
         This includes options that have default values that haven't been
         overridden.
         """
@@ -191,7 +191,7 @@ class Configuration(object):
 class Section(object):
     """
     Proxy for a specific configuration section.
-    
+
     Objects of this class should not be instantiated directly.
     """
     __slots__ = ['config', 'name', 'overridden']
@@ -233,7 +233,7 @@ class Section(object):
     def getbool(self, name, default=None):
         """
         Return the value of the specified option as boolean.
-        
+
         This method returns `True` if the option value is one of "yes", "true",
         "on", or "1", ignoring case. Otherwise `False` is returned.
         """
@@ -245,7 +245,7 @@ class Section(object):
     def getint(self, name, default=None):
         """
         Return the value of the specified option as integer.
-        
+
         If the specified option can not be converted to an integer, a
         `ConfigurationError` exception is raised.
         """
@@ -261,7 +261,7 @@ class Section(object):
         """
         Return a list of values that have been specified as a single
         comma-separated option.
-        
+
         A different separator can be specified using the `sep` parameter. If
         the `skip_empty` parameter is set to `True`, empty elements are omitted
         from the list.
@@ -285,7 +285,7 @@ class Section(object):
     def set(self, name, value):
         """
         Change a configuration value.
-        
+
         These changes are not persistent unless saved with `save()`.
         """
         if not self.config.parser.has_section(self.name):
@@ -308,7 +308,7 @@ class Option(object):
     def __init__(self, section, name, default=None, doc=''):
         """
         Create the extension point.
-        
+
         @param section: the name of the configuration section this option
             belongs to
         @param name: the name of the option

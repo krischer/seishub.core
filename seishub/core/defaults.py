@@ -63,7 +63,7 @@ BASH_DEBUG = """#!/bin/bash
 PYTHON=%s
 INSTANCE=%s
 
-"$PYTHON" -m seishub.core.daemon -no -d "$INSTANCE"
+"$PYTHON" -m seishub.core.daemon --no_save --nodaemon --rundir "$INSTANCE"
 """
 
 BASH_START = """#!/bin/bash

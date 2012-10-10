@@ -13,10 +13,10 @@ class PackageInstaller(object):
      * stylesheets
      * aliases
      * indexes
-      
-    A package/resourcetype etc. is installed automatically when found the 
+
+    A package/resourcetype etc. is installed automatically when found the
     first time, but not if an already existing package was updated to a new
-    version. To find out about updated packages and resourcetypes use 
+    version. To find out about updated packages and resourcetypes use
     the getUpdated() method.
     """
 
@@ -72,13 +72,10 @@ class PackageInstaller(object):
             for entry in o._registry_stylesheets:
                 type = entry['type']
                 filename = entry['filename']
-                name = filename.split(os.sep)[-1]
+                name = os.path.basename(filename)
                 # check, if already there
                 if env.registry.stylesheets.get(package_id, resourcetype_id,
                                                 type):
-                    msg = "Skipping Stylesheet /%s/%s - %s"
-                    env.log.debug(msg % (package_id, resourcetype_id,
-                                         filename))
                     continue
                 msg = "Registering Stylesheet /%s/%s - %s ..."
                 env.log.info(msg % (package_id, resourcetype_id, filename))
@@ -149,7 +146,7 @@ class PackageInstaller(object):
     def install(env, package_id=None):
         """
         Auto install all known packages.
-        
+
         If package is given, only the specified package will be installed.
         """
         env.log.debug("Installing file system based Components ...")
@@ -174,7 +171,7 @@ class PackageInstaller(object):
                 try:
                     PackageInstaller._install_package(env, fs_package)
                 except Exception, e:
-                    env.log.warn(("Registration of package with id '%s' " + \
+                    env.log.warn(("Registration of package with id '%s' " +
                                   "failed. (%s)") % (p, e))
                     continue
             # (re)install package specific objects
@@ -183,13 +180,13 @@ class PackageInstaller(object):
             # install new resourcetypes for package p
             for rt in env.registry.getResourceTypes(p):
                 db_rt = env.registry.db_getResourceTypes(p, rt.resourcetype_id)
-                if len(db_rt) == 0:
+                if not db_rt:
                     try:
                         PackageInstaller._install_resourcetype(env, rt)
                     except Exception, e:
-                        env.log.warn(("Registration of resourcetype " + \
-                                      "with id '%s' in package '%s'" + \
-                                      " failed. (%s)") % \
+                        env.log.warn(("Registration of resourcetype "
+                                      "with id '%s' in package '%s'"
+                                      " failed. (%s)") %
                                       (rt.resourcetype_id, p, e))
                         continue
                 # (re)install resourcetype specific objects
@@ -197,7 +194,7 @@ class PackageInstaller(object):
         env.log.info("Components have been updated.")
 
     @staticmethod
-    def cleanup(env): #@UnusedVariable
+    def cleanup(env):  # @UnusedVariable
         """
         Automatically remove unused packages.
         """
@@ -209,7 +206,7 @@ class PackageInstaller(object):
 #            if [rt.package.package_id, rt.resourcetype_id] not in \
 #               [[o.package_id, o.resourcetype_id] for o in env.registry.getResourceTypes(rt.package.package_id)]:
 #                try:
-#                    env.registry.db_deleteResourceType(rt.package.package_id, 
+#                    env.registry.db_deleteResourceType(rt.package.package_id,
 #                                                       rt.resourcetype_id)
 #                except SeisHubError:
 #                    pass

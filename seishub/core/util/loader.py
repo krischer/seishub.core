@@ -1,7 +1,12 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Simple class to automatically discover and load all SeisHub plugins.
+"""
 
+import copy
+import pkg_resources
 import os
-import pkg_resources #@UnresolvedImport
 import sys
 
 
@@ -10,9 +15,17 @@ __all__ = ['ComponentLoader']
 
 class ComponentLoader(object):
     """
-    Load all plug-ins found on the given search path.
-    """
+    Upon construction, this class will automatically load all SeisHub plugins
+    it finds.
 
+    Every Python module that registers a "seishub.plugin" entry_point will be
+    considered a SeisHub plugin and consequently loaded.
+
+    Three places are searched for plugins:
+        * seishub.plugins_dir as specified in the SeisHub config file.
+        * The 'plugins' subdirectory of the current SeisHub instance.
+        * Any path in sys.path.
+    """
     def __init__(self, env):
         self.env = env
         extra_path = env.config.get('seishub', 'plugins_dir')
@@ -22,33 +35,30 @@ class ComponentLoader(object):
         # add user defined paths
         if extra_path:
             search_path += list((extra_path,))
-        self._loadEggs('seishub.plugins', search_path)
+        self._loadPlugins(search_path)
 
-    def _loadEggs(self, entry_point, search_path):
+    def _loadPlugins(self, extra_search_paths):
         """
-        Loader that loads SeisHub eggs from the search path and L{sys.path}.
+        Loader that loads SeisHub plugins from the specified search paths and
+        L{sys.path}.
         """
-        self.env.log.debug('Looking for plug-ins ...')
-        # add system paths
-        search_path += list(sys.path)
+        # Modify sys.path to find any additional modules.
+        unmodified_system_path = copy.deepcopy(sys.path)
+        sys.path += extra_search_paths
 
-        distributions, errors = pkg_resources.working_set.find_plugins(
-            pkg_resources.Environment(search_path)
-        )
-        for d in distributions:
-            # lookup entry points
-            if entry_point not in d.get_entry_map().keys():
-                continue
-            self.env.log.debug('Found egg %s ...' % (d))
-            pkg_resources.working_set.add(d)
-
-        for dist, e in errors.iteritems():
-            self.env.log.warn('Skipping egg "%s": %s' % (dist, e))
-
-        for entry in pkg_resources.iter_entry_points(entry_point):
-            self.env.log.debug('Initialize egg %s ...' % (entry.module_name))
+        # Loop over all modules
+        plugin_count = 0
+        for entry in pkg_resources.iter_entry_points("seishub.plugins"):
+            self.env.log.debug("Loading plugin '%s v%s' from %s ..." %
+                (entry.module_name, entry.dist.version, entry.dist.location))
             try:
                 entry.load()
             except Exception, e:
-                self.env.log.warn('Skipping egg "%s": %s' % (entry.name, e))
-        self.env.log.info('Plug-ins have been initialized.')
+                self.env.log.warn("Could not load plugin '%s': %s" %
+                                  (entry.name, e))
+            plugin_count += 1
+
+        self.env.log.info("Initialized %i plug-in(s)." % plugin_count)
+
+        # Restore sys.path.
+        sys.path = unmodified_system_path

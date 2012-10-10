@@ -2,7 +2,7 @@
 """
 The one class to rule them all.
 
-Environment is the base class to handle configuration, XML catalog, database 
+Environment is the base class to handle configuration, XML catalog, database
 and logging access.
 """
 
@@ -29,10 +29,10 @@ from seishub.core.registry.registry import ComponentRegistry
 class Environment(ComponentManager):
     """
     The one class to rule them all.
-    
-    Environment is the base class to handle configuration, XML catalog, 
+
+    Environment is the base class to handle configuration, XML catalog,
     database and logging access.
-    
+
     A SeisHub environment consists of:
         * a configuration handler env.config
         * a XML catalog handler env.catalog
@@ -49,6 +49,12 @@ class Environment(ComponentManager):
                  log_file="seishub.log", create=None):
         """
         Initialize the SeisHub environment.
+
+        :param path: The root directory of the current SeisHub instance.
+        :param application: A twisted.application.service.Application instance.
+        :param log_file: The name of the log file or None for debug mode.
+        :param create: Boolean flag. If True, a new SeisHub instance will be
+            created at path.
         """
         # set application
         self.app = application
@@ -74,34 +80,52 @@ class Environment(ComponentManager):
             self.config = Configuration(config_file)
         self.config.path = path
         self.config.hubs = {}
+
         # set log handler
         self.log = Logger(self, log_file)
+
         # initialize all default options
         self.initDefaultOptions()
+
+        self.log.debug("Starting DB Manager")
         # set up DB handler
         self.db = DatabaseManager(self)
+
+        self.log.debug("Starting Component Manager")
         # set up component manager
         ComponentManager.__init__(self)
         self.compmgr = self
-        # initialize all default options
-        self.initDefaultOptions()
+
+        self.log.debug("Starting XML Catalog")
         # set XML catalog
         self.catalog = XmlCatalog(self)
+
+        self.log.debug("Starting Authenticator")
         # user and group management
         self.auth = AuthenticationManager(self)
+
+        self.log.debug("Loading Plugins")
         # load plug-ins
         ComponentLoader(self)
+
+        self.log.debug("Starting Component Registry")
         # Package manager
-        # initialize ComponentRegistry after ComponentLoader(), as plug-ins 
+        # initialize ComponentRegistry after ComponentLoader(), as plug-ins
         # may provide registry objects
         self.registry = ComponentRegistry(self)
+
+        self.log.debug("Launching Package Installer")
         # trigger auto installer
         PackageInstaller.install(self)
+
+        self.log.debug("Starting Resource Tree")
         # initialize the resource tree
         self.tree = ResourceTree(self)
         self.update()
+
         # XSLT transformation parameters
         self.xslt_params = {}
+
         # check if new environment has been created
         if create:
             exit()
@@ -164,7 +188,7 @@ class Environment(ComponentManager):
                 else:
                     value = defaults.get(section).get(name)
                     self.config.set(section, name, value)
-                    self.log.info('Setting default value for [%s] %s = %s' \
+                    self.log.info('Setting default value for [%s] %s = %s'
                                   % (section, name, value))
                     self.config.save()
 
@@ -259,11 +283,11 @@ class Environment(ComponentManager):
     def initComponent(self, component):
         """
         Initialize additional member variables for components.
-        
+
         Every component activated through the `Environment` object gets a few
         member variables: `env` (the environment object), `config` (the
-        environment configuration), `log` (a logger object), `db` (the 
-        database handler), `catalog` (a XML catalog object), `registry` (a 
+        environment configuration), `log` (a logger object), `db` (the
+        database handler), `catalog` (a XML catalog object), `registry` (a
         package registry handler) and `auth` (a user management object).
         """
         component.env = self
@@ -278,7 +302,7 @@ class Environment(ComponentManager):
         """
         Implemented to only allow activation of components that are not
         disabled in the configuration.
-        
+
         This is called by the `ComponentManager` base class when a component is
         about to be activated. If this method returns false, the component does
         not get activated.

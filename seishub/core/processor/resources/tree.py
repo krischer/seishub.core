@@ -12,10 +12,10 @@ import os
 class ResourceTree(StaticFolder):
     """
     The root node of the the complete resource tree.
-    
+
     This resource should be instantiated only once. It will auto generate a
     resource tree with standard items like a REST, administrative and mapper
-    resources. You may add children to this folder resource by using an 
+    resources. You may add children to this folder resource by using an
     absolute path at the putChild method.
     """
     def __init__(self, env, **kwargs):

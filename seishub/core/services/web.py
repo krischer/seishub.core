@@ -12,11 +12,11 @@ from seishub.core.exceptions import InternalServerError, ForbiddenError, \
     SeisHubError
 from seishub.core.processor import Processor, HEAD, getChildForRequest
 from seishub.core.processor.interfaces import IFileSystemResource, IResource, \
-    IStatical, IRESTResource, IAdminResource
+    IStatical, IRESTResource
 from seishub.core.util.path import addBase
 from seishub.core.util.text import isInteger
 from twisted.application import service
-from twisted.application.internet import SSLServer, TCPServer #@UnresolvedImport
+from twisted.application.internet import SSLServer, TCPServer
 from twisted.internet import threads, defer, ssl
 from twisted.python.failure import Failure
 from twisted.web import http, server, static
@@ -37,7 +37,8 @@ RESOURCELIST_ROOT = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 RESOURCELIST_NODE = """
-  <%s category="%s"%s xlink:type="simple" xlink:href="%s"><![CDATA[%s]]></%s>"""
+  <%s category="%s"%s xlink:type="simple" xlink:href="%s"><![CDATA[%s]]></%s>
+""".strip()
 
 
 class WebRequest(Processor, http.Request):
@@ -57,8 +58,6 @@ class WebRequest(Processor, http.Request):
         """
         XXX: this will change soon!
         """
-        if self.getUser() == 'anonymous':
-            return False
         try:
             authenticated = self.env.auth.checkPassword(self.getUser(),
                                                         self.getPassword())
@@ -75,7 +74,7 @@ class WebRequest(Processor, http.Request):
         realm = str(self.env.config.get('web', 'admin_title'))
         self.setHeader('WWW-Authenticate', 'Basic realm="%s"' % (realm))
         self.setResponseCode(http.UNAUTHORIZED)
-        self.write('Authentication required.')
+        self.write("Access denied.")
         self.finish()
 
     def render(self):
@@ -107,18 +106,21 @@ class WebRequest(Processor, http.Request):
         if result == server.NOT_DONE_YET:
             # resource takes care about rendering
             return
-        # XXX: all or nothing - only authenticated are allowed to access
-        # should be replaced with a much finer mechanism
-        # URL, role and group based
-        # XXX: Do something else here!
-        ##  if not IAdminResource.providedBy(result) and \
-        ##     self.env.auth.getUser('anonymous').permissions == 755:
-        ##      # skip for non administrative resources and allow anonymous access
-        ##      # if permission are set
-        ##      pass
-        ##  elif not result.public and not self.isAuthenticatedUser():
-        ##      self.authenticate()
-        ##      return
+
+        if not hasattr(result, "authorization"):
+            print "AAAAAHHHH: NEED AUTHORIZATION. FIX THIS:", result
+        else:
+            if not result.authorization["public"]:
+                if not self.isAuthenticatedUser():
+                    self.authenticate()
+                    return
+                user = self.getUser()
+                if not result.authorization["owner"] == user and \
+                    not self.env.auth.checkIsUserInGroup(user,
+                            result.authorization["group"]):
+                        self.authenticate()
+                        return
+
         # check result and either render direct or in thread
         if IFileSystemResource.providedBy(result):
             # file system resources render direct
@@ -155,6 +157,9 @@ class WebRequest(Processor, http.Request):
         raise InternalServerError(msg % type(result))
 
     def _cbSuccess(self, result):
+        """
+        The callback function for a deferred thread in case of success.
+        """
         if isinstance(result, dict):
             # a folderish resource
             return self._renderFolder(result)
@@ -169,6 +174,9 @@ class WebRequest(Processor, http.Request):
             return server.NOT_DONE_YET
 
     def _cbFailed(self, failure):
+        """
+        The callback function for a deferred thread in case of failure.
+        """
         if not isinstance(failure, Failure):
             raise
         if 'seishub.exceptions.SeisHubError' not in failure.parents:
@@ -260,15 +268,17 @@ class WebRequest(Processor, http.Request):
         # set default content type to XML
         if 'content-type' not in self.headers:
             self.setHeader('content-type', 'application/xml; charset=UTF-8')
+
         # gzip encoding
-        encoding = self.getHeader("accept-encoding")
-        if encoding and encoding.find("gzip") >= 0:
-            zbuf = StringIO.StringIO()
-            zfile = gzip.GzipFile(None, 'wb', 9, zbuf)
-            zfile.write(data)
-            zfile.close()
-            self.setHeader("content-encoding", "gzip")
-            data = zbuf.getvalue()
+        #encoding = self.getHeader("accept-encoding")
+        #if encoding and encoding.find("gzip") >= 0:
+            #zbuf = StringIO.StringIO()
+            #zfile = gzip.GzipFile(None, 'wb', 9, zbuf)
+            #zfile.write(data)
+            #zfile.close()
+            #self.setHeader("content-encoding", "gzip")
+            #data = zbuf.getvalue()
+
         # set header
         self.setHeader('content-length', str(len(data)))
         # write output
@@ -447,7 +457,7 @@ class HTTPSService(SSLServer):
         # generate
         msg = "Generating new certificate files for the HTTPS service ..."
         self.env.log.warn(msg)
-        timespan = (0, 60 * 60 * 24 * 365 * 5) # five years
+        timespan = (0, 60 * 60 * 24 * 365 * 5)  # five years
         pkey_file = os.path.join(self.env.config.path, HTTPS_PKEY_FILE)
         cert_file = os.path.join(self.env.config.path, HTTPS_CERT_FILE)
         # CA

@@ -4,7 +4,7 @@ Administrative resources.
 """
 
 from Cheetah.Template import Template
-from pkg_resources import resource_filename #@UnresolvedImport
+from pkg_resources import resource_filename  # @UnresolvedImport
 from seishub.core import __version__ as SEISHUB_VERSION
 from seishub.core.core import PackageManager
 from seishub.core.packages.interfaces import IAdminPanel, IAdminTheme, \
@@ -28,10 +28,12 @@ class AdminPanel(Resource):
         self.category = 'admin'
         self.folderish = False
         self.panel = panel
-        self.public = self.panel.public
         self.panel.root = root
         self.root = root
         self.cid, _, self.pid, _ = self.panel.panel_ids
+        # Hard code the authorization for the admin panel.
+        self.authorization = {"owner": "admin", "group": "admin", "rights":
+            "770", "public": False}
 
     def render(self, request):
         # content
@@ -67,6 +69,7 @@ class AdminPanel(Resource):
         page.instance = request.env.config.path
         page.CSS = content.getVar('CSS', '')
         page.JAVASCRIPT = content.getVar('JAVASCRIPT', '')
+        page.logged_in_user = request.getUser()
         # error handling
         page.error = self._renderError(data)
         # default headers

@@ -34,7 +34,7 @@ class ComponentRegistry(DbStorage):
 
     def getComponents(self, interface, package_id=None):
         """
-        Returns components implementing a certain interface with a given 
+        Returns components implementing a certain interface with a given
         package_id.
         """
         components = PackageManager.getComponents(interface, package_id,
@@ -57,7 +57,7 @@ class ComponentRegistry(DbStorage):
         Returns sorted list of all enabled package ids.
         """
         all = PackageManager.getPackageIds()
-        enabled = [id for id in all if self.env.isComponentEnabled \
+        enabled = [id for id in all if self.env.isComponentEnabled
                    (PackageManager.getClasses(IPackage, id)[0])]
         return sorted(enabled)
 
@@ -70,9 +70,9 @@ class ComponentRegistry(DbStorage):
     def getAllPackagesAndResourceTypes(self):
         """
         Returns dictionary of enabled resource type and package IDs.
-        
+
         List of resource types of each package is sorted.
-        
+
         @return: {'package_id': ['resourcetype_id_1', 'resourcetype_id_2']}
         @rtype: dictionary
         """
@@ -80,7 +80,7 @@ class ComponentRegistry(DbStorage):
         resourcetypes = dict()
         for id in ids:
             all = PackageManager.getClasses(IResourceType, id)
-            resourcetypes[id] = [cls.resourcetype_id for cls in all \
+            resourcetypes[id] = [cls.resourcetype_id for cls in all
                                 if self.env.isComponentEnabled(cls)]
         # sort
         for id in resourcetypes.keys():
@@ -106,7 +106,7 @@ class ComponentRegistry(DbStorage):
 
     def getResourceTypeIds(self, package_id):
         """
-        Returns a sorted list of all enabled resource type ids for a given 
+        Returns a sorted list of all enabled resource type ids for a given
         package id.
         """
         if not self.isPackageId(package_id):
@@ -140,7 +140,6 @@ class ComponentRegistry(DbStorage):
             raise InvalidParameterError(msg % str(resourcetype_id))
         return package, resourcetype
 
-
     # methods for database registration of packages
     def db_registerPackage(self, package_id, version=''):
         o = PackageWrapper(package_id, version)
@@ -163,13 +162,13 @@ class ComponentRegistry(DbStorage):
         #XXX: workaround to check if there are any dependencies on this object
         # as not all dbs are supporting foreign keys
         if not self._is_package_deletable(package_id):
-            raise SeisHubError(("Package with id '%s' cannot be deleted due " + \
-                               "to other objects depending on it.") % \
+            raise SeisHubError(("Package with id '%s' cannot be deleted due "
+                               "to other objects depending on it.") %
                                 (str(package_id)))
         self.drop(PackageWrapper, package_id=package_id)
         #except IntegrityError:
-        #    raise SeisHubError(("Package with id '%s' cannot be deleted due "+\
-        #                       "to other objects depending on it.") %\
+        #    raise SeisHubError(("Package with id '%s' cannot be deleted due "
+        #                       "to other objects depending on it.") %
         #                        (str(package_id)))
 
     def db_registerResourceType(self, package_id, resourcetype_id,
@@ -177,7 +176,7 @@ class ComponentRegistry(DbStorage):
         try:
             package = self.db_getPackages(package_id)[0]
         except IndexError:
-            raise SeisHubError('Package not present in database: %s' % \
+            raise SeisHubError('Package not present in database: %s' %
                                str(package_id))
         o = ResourceTypeWrapper(resourcetype_id, package,
                                 version, version_control)
@@ -189,7 +188,7 @@ class ComponentRegistry(DbStorage):
         if resourcetype_id:
             kwargs['resourcetype_id'] = resourcetype_id
         if package_id:
-            kwargs['package'] = {'package_id':package_id}
+            kwargs['package'] = {'package_id': package_id}
         rt = self.pickup(ResourceTypeWrapper, **kwargs)
         return rt
 
@@ -203,9 +202,9 @@ class ComponentRegistry(DbStorage):
         # XXX: workaround to check if there are any dependencies on this object
         # as not all dbs are supporting foreign keys
         if not self._is_resourcetype_deletable(package_id, resourcetype_id):
-            raise SeisHubError(("Resourcetype with id '%s' in package '%s' " + \
-                                "cannot be deleted due to other objects " + \
-                                "depending on it.") % \
+            raise SeisHubError(("Resourcetype with id '%s' in package '%s' "
+                                "cannot be deleted due to other objects "
+                                "depending on it.") %
                                 (str(resourcetype_id), str(package_id)))
         kwargs = dict()
         package = self.db_getPackages(package_id)[0]
@@ -244,8 +243,8 @@ class ComponentRegistry(DbStorage):
 class RegistryBase(DbStorage, list):
     """
     Base class for StylesheetRegistry, SchemaRegistry and AliasRegistry.
-    
-    NOTE: a registry object is unambiguously defined by either 
+
+    NOTE: a registry object is unambiguously defined by either
     (package, resourcetype, type) or by (package, type) respectively.
     """
 
@@ -260,7 +259,7 @@ class RegistryBase(DbStorage, list):
         type = None
         args = uri.split('/')
         package_id = args[1]
-        if len(args) == 3: # no resourcetype
+        if len(args) == 3:  # no resourcetype
             type = args[2]
         elif len(args) == 4:
             resourcetype_id = args[2]
@@ -314,10 +313,10 @@ class RegistryBase(DbStorage, list):
         o = self.get(package_id, resourcetype_id, type,
                      uri=uri, document_id=document_id)
         if len(o) > 1:
-            raise SeisHubError("Error deleting a schema or stylesheet: " + \
+            raise SeisHubError("Error deleting a schema or stylesheet: "
                                "Unexpected result set length.")
         if len(o) == 0:
-            raise SeisHubError("Error deleting a schema or stylesheet: " + \
+            raise SeisHubError("Error deleting a schema or stylesheet: "
                                "No objects found with the given parameters.")
         self.catalog.deleteResource(resource_id=o[0].resource._id)
         self.drop(self.cls, document_id=o[0].document_id)
@@ -342,7 +341,7 @@ class SchemaRegistry(RegistryBase):
         type = None
         args = uri.split('/')
         package_id = args[1]
-        if len(args) == 3: # no type
+        if len(args) == 3:  # no type
             resourcetype_id = args[2]
         elif len(args) == 4:
             resourcetype_id = args[2]
@@ -354,7 +353,7 @@ class SchemaRegistry(RegistryBase):
     def register(self, package_id, resourcetype_id, type, xml_data, name=None):
         """
         Register a schema.
-        
+
         @param package_id: package id
         @type package_id: str
         @param resourcetype_id: resourcetype id
@@ -374,13 +373,13 @@ class SchemaRegistry(RegistryBase):
     def get(self, package_id=None, resourcetype_id=None, type=None,
             document_id=None, uri=None):
         """
-        Get schemas either by (package_id, resourcetype_id, type), 
+        Get schemas either by (package_id, resourcetype_id, type),
         by document_id of related XmlDocument or by uri.
-        
+
         The following parameter combinations return a single schema:
          - get(package_id, resourcetype_id, type)
          - get(document_id = ...)
-        
+
         The following combinations return multiple schemas:
          - get(package_id, resourcetype_id)
          - get(package_id)
@@ -393,8 +392,8 @@ class SchemaRegistry(RegistryBase):
                document_id=None, uri=None):
         """
         Remove a schema from the registry.
-        
-        Deletion of multiple schemas is not allowed. Therefore the following 
+
+        Deletion of multiple schemas is not allowed. Therefore the following
         parameter combinations are allowed:
          - delete(package_id, resourcetype_id, type)
          - delete(document_id = ...)
@@ -413,7 +412,7 @@ class StylesheetRegistry(RegistryBase):
     def register(self, package_id, resourcetype_id, type, xml_data, name=None):
         """
         Register a stylesheet.
-        
+
         @param package_id: package id
         @type package_id: str
         @param resourcetype_id: resourcetype id (may be None)
@@ -431,14 +430,14 @@ class StylesheetRegistry(RegistryBase):
     def get(self, package_id=None, resourcetype_id=None, type=None,
             document_id=None, uri=None):
         """
-        Get stylesheets either by (package_id, resourcetype_id, type), 
+        Get stylesheets either by (package_id, resourcetype_id, type),
         by document_id of related XmlDocument or by uri.
-        
+
         The following parameter combinations return a single stylesheet:
          - get(package_id, resourcetype_id, type) -> resourcetype specific
          - get(package_id, None, type) -> package specific
          - get(document_id = ...)
-         
+
         The following combinations return multiple stylesheets:
          - get(package_id, resourcetype_id) -> resourcetype specific
          - get(package_id) -> package specific
@@ -453,8 +452,8 @@ class StylesheetRegistry(RegistryBase):
                document_id=None, uri=None):
         """
         Remove a stylesheet from the registry.
-        
-        Deletion of multiple stylesheets is not allowed. Therefore the 
+
+        Deletion of multiple stylesheets is not allowed. Therefore the
         following parameter combinations are allowed:
          - delete(package_id, resourcetype_id, type)
          - delete(package_id, None, type)
@@ -489,7 +488,7 @@ class AliasRegistry(RegistryBase):
 class MapperRegistry(dict):
     """
     The Mapper registry.
-    
+
     This dictionary contains all activated mappings.
     """
     _urls = dict()
@@ -582,7 +581,7 @@ class SQLViewRegistry(object):
         # unregister
         self._view_objs.pop(cls.view_id)
 
-    def get(self, url=None): #@UnusedVariable
+    def get(self, url=None):  # @UnusedVariable
         """
         Returns a dictionary of activated SQL view classes.
         """
@@ -645,7 +644,7 @@ class ProcessorIndexRegistry(object):
 class ResourceFormaterRegistry(object):
     """
     The ResourceFormater registry.
-    
+
     This dictionary contains all activated ResourceFormater.
     """
     _dict = dict()
@@ -695,7 +694,7 @@ class ResourceFormaterRegistry(object):
 
     def get(self, package_id, resourcetype_id, format):
         """
-        Returns the ResourceFormater class for a given package, resource and 
+        Returns the ResourceFormater class for a given package, resource and
         format id.
         """
         ids = (package_id, resourcetype_id, format)

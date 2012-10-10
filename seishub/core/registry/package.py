@@ -13,12 +13,10 @@ class PackageWrapper(Serializable):
     """
     Wrapped around packages for storage in database.
     """
-
     db_table = packages_tab
-    db_mapping = {'package_id':'name',
-                  'version':'version',
-                  '_id':'id'
-                  }
+    db_mapping = {'package_id': 'name',
+                  'version': 'version',
+                  '_id': 'id'}
 
     def __init__(self, package_id=None, version=''):
         self.package_id = package_id
@@ -49,15 +47,16 @@ class PackageWrapper(Serializable):
 
 
 class ResourceTypeWrapper(Serializable):
-    """Wrapped around resource types for storage in database."""
-
+    """
+    Wrapped around resource types for storage in database.
+    """
     db_table = resourcetypes_tab
-    db_mapping = {'resourcetype_id':'name',
-                  'package':Relation(PackageWrapper, 'package_id',
+    db_mapping = {'resourcetype_id': 'name',
+                  'package': Relation(PackageWrapper, 'package_id',
                                      lazy=False),
-                  'version':'version',
-                  'version_control':'version_control',
-                  '_id':'id'
+                  'version': 'version',
+                  'version_control': 'version_control',
+                  '_id': 'id'
                   }
 
     def __init__(self, resourcetype_id=None, package=PackageWrapper(),
@@ -114,7 +113,7 @@ class ResourceTypeWrapper(Serializable):
 
 class Alias(Serializable):
     db_table = alias_tab
-    db_mapping = {'uri':'uri', 'expr':'expr'}
+    db_mapping = {'uri': 'uri', 'expr': 'expr'}
 
     def __init__(self, uri=None, expr=None):
         super(Serializable, self).__init__()
@@ -139,7 +138,7 @@ class Alias(Serializable):
 
     def setExpr(self, data):
         if data is not None and not isinstance(data, basestring):
-            raise TypeError("Invalid alias expression, String expected: %s" % \
+            raise TypeError("Invalid alias expression, String expected: %s" %
                              data)
         self._expr = data
 
@@ -147,12 +146,12 @@ class Alias(Serializable):
 
 
 class DocBase(Serializable):
-    db_mapping = {'resourcetype':Relation(ResourceTypeWrapper,
+    db_mapping = {'resourcetype': Relation(ResourceTypeWrapper,
                                           'resourcetype_id'),
-                  'package':Relation(PackageWrapper,
+                  'package': Relation(PackageWrapper,
                                      'package_id'),
-                  'type':'type',
-                  'document_id':'document_id'
+                  'type': 'type',
+                  'document_id': 'document_id'
                   }
 
     def __init__(self, package=PackageWrapper(),
@@ -203,9 +202,9 @@ class DocBase(Serializable):
     type = property(getType, setType, "Type")
 
     def getResource(self):
-        # lazy resource retrieval: to avoid getting all resources in the registry
-        # on every query, resources are retrieved only if really needed (and 
-        # accessed via schema.resource
+        # lazy resource retrieval: to avoid getting all resources in the
+        # registry on every query, resources are retrieved only if really
+        # needed (and accessed via schema.resource
         if hasattr(self, '_resource'):
             return self._resource
         if not hasattr(self, '_catalog'):
@@ -256,7 +255,7 @@ class Stylesheet(DocBase):
         """
         Transform a given Resource with the stylesheet.
 
-        @type resource: IResource or basestring 
+        @type resource: IResource or basestring
         @return: Transformed xml data as a string
         """
         if IResource.providedBy(resource):

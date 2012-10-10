@@ -17,9 +17,9 @@ LOG_LEVELS = {'OFF': 0,
 
 class Logger(object):
     """
-    A log manager to handle all incoming log calls. 
-    
-    You still may use twisted.python.log.msg and twisted.python.log.err to 
+    A log manager to handle all incoming log calls.
+
+    You still may use twisted.python.log.msg and twisted.python.log.err to
     emit log messages.
     """
 
@@ -46,6 +46,7 @@ class Logger(object):
             daily_log_file = logfile.DailyLogFile(log_file, log_path)
             env.app.setComponent(log.ILogObserver,
                                  log.FileLogObserver(daily_log_file).emit)
+        self.log_file = log_file
         self.start()
 
     def start(self):
@@ -60,6 +61,14 @@ class Logger(object):
     def _formatMessage(self, level, msg, showTraceback):
         if level:
             msg = '%s: %s' % (level, msg)
+            # Colored terminal output.
+            if self.log_file is None:
+                if level == "WARN":
+                    msg = '\033[0;33m%s\033[1;m' % msg
+                elif level == "DEBUG":
+                    msg = '\033[0;34m%s\033[1;m' % msg
+                elif level == "ERROR":
+                    msg = '\033[0;31m%s\033[1;m' % msg
         log.msg(msg, isError=True)
         if showTraceback:
             log.msg(traceback.format_exc(), isError=True)

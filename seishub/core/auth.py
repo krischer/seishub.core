@@ -2,8 +2,7 @@
 
 from seishub.core.config import IntOption, Option
 from seishub.core.defaults import MIN_PASSWORD_LENGTH
-from seishub.core.exceptions import DuplicateObjectError, SeisHubError, \
-    InvalidParameterError
+from seishub.core.exceptions import DuplicateObjectError, SeisHubError
 from seishub.core.util.text import hash
 from sqlalchemy import Column, String, create_engine, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -35,6 +34,7 @@ class PasswordDictChecker:
         Alternatively, return the result itself.
         """
         username = credentials.username
+
         if username in self.env.auth.passwords:
             if hash(credentials.password) == self.env.auth.passwords[username]:
                 return defer.succeed(username)
@@ -254,6 +254,12 @@ class AuthenticationManager(object):
         session.close()
         self.refresh()
 
+    def checkIsUserInGroup(self, user_name, group_name):
+        user = self.getUser(user_name)
+        if group_name in user.groups:
+            return True
+        return False
+
     def getGroup(self, group_name):
         """
         Returns the Group instance of one user.
@@ -355,5 +361,104 @@ class AuthenticationManager(object):
     def getCheckers(self):
         """
         Returns a tuple of checkers used by Twisted portal objects.
+
+        Currently used by the manhole, sftp and ssh services.
         """
         return (PasswordDictChecker(self.env),)
+
+
+class Authorization(object):
+    """
+    Object dealing with the authorization of resources. It is meant to be
+    attached to a resource object and stores the owner, the group and the
+    permissions for owner/group/others for the parent object.
+
+    The permission model is modelled after the Unix file system and is a three
+    digit octal code with the same meaning.
+    """
+    def __init__(self, owner="admin", group="admin", permissions="660",
+        public=False):
+        """
+        """
+        self._read_actions = ["r", "read"]
+        self._write_actions = ["w", "write"]
+        self.owner = owner
+        self.group = group
+        self.permissions = permissions
+        self.public = public
+
+    def is_authorized(self, action, user=None, user_groups=None):
+        """
+        Determine whether the given user with his groups is authorized to
+        access this resource.
+
+        :param action: "r", "read", "w" or "write"
+        """
+        action = action.lower()
+        # If public read access is True, return True.
+        if self.public is True and action in self._read_actions:
+            return True
+        # User and the groups of the user needs to be given.
+        if user is None or user_groups is None:
+            return False
+        # Determine owner and group membership.
+        if user == self.owner:
+            user_is_owner = True
+        else:
+            user_is_owner = False
+        if self.group in user_groups:
+            user_in_group = True
+        else:
+            user_in_group = False
+        # Check read actions. Bitwise and with 4 has to not be 0!
+        if action in self._read_actions:
+            if user_is_owner and self._owner_rights & 4:
+                return True
+            if user_in_group and self._group_rights & 4:
+                return True
+            if user_is_owner is False and user_in_group is False and \
+                self._others_righths & 4:
+                return True
+        # Check write actions. Bitwise and with 2 has to not be 0!
+        elif action in self._writer_actions:
+            if user_is_owner and self._owner_rights & 2:
+                return True
+            if user_in_group and self._group_rights & 2:
+                return True
+            if user_is_owner is False and user_in_group is False and \
+                self._others_righths & 2:
+                return True
+        return False
+
+    @property
+    def permissions(self):
+        """
+        Permissions of a resource in UNIX like octal notation.
+
+        The read bit adds 4 to the total value.
+        The write bit adds 2 to the total value.
+        The execute bit adds 1 to the total value (Currently has no meaning!).
+
+        Examples:
+            600: Read and write permission only for the resource owner.
+            644: Read permissions for everyone + write permissions for the
+                 owner.
+            640: Read permissions for the group and owner + write permissions
+                 for the owner.
+            666: Read and write permissions for everyone.
+            400: Read access only for the owner. Useful to prevent accidental
+                 changes.
+
+        Other combinations are possible but likely do not make much sense.
+        """
+        return "%i%i%i" % (self._owner_rights, self._group_rights,
+            self._others_rights)
+
+    @permissions.setter
+    def permissions(self, value):
+        if len(value) != 3 or not isinstance(value, basestring):
+            msg = "Permission needs to be a three digit string."
+            raise SeisHubError(msg)
+        self._owner_rights = int(value[0])
+        self._group_rights = int(value[1])
+        self._others_rights = int(value[2])

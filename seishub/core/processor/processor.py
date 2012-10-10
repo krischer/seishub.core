@@ -6,7 +6,7 @@ The processor resolves a resource request containing:
 
   (1) a method, e.g. GET, PUT, POST, DELETE, etc.,
   (2) a absolute path, e.g. '/folder2/resource1' and
-  (3) header information, e.g. {'content-type': 'text/html'}) 
+  (3) header information, e.g. {'content-type': 'text/html'})
 
 into one of the resource objects of the resource tree object. Errors should be
 handled by raising a SeisHubError instance.
@@ -19,7 +19,7 @@ from twisted.web import http
 import urllib
 
 
-# Maximal length of an URL 
+# Maximal length of an URL
 # see U{http://www.boutell.com/newfaq/misc/urllength.html}
 MAXIMAL_URL_LENGTH = 1000
 
@@ -38,7 +38,7 @@ ALLOWED_HTTP_METHODS = [GET, PUT, POST, DELETE, MOVE, HEAD, OPTIONS]
 class Processor:
     """
     General class for processing a resource request.
-    
+
     This class is the layer underneath services like HTTP(S), SFTP and WebDAV.
     """
     def __init__(self, env):
@@ -78,9 +78,9 @@ class Processor:
     def process(self):
         """
         Working through the process chain.
-        
-        This method returns either a dictionary for a folder node containing 
-        objects implementing the L{IResource} interface or a single object 
+
+        This method returns either a dictionary for a folder node containing
+        objects implementing the L{IResource} interface or a single object
         for a leaf node, like a file or document resource.
         """
         if isinstance(self.path, unicode):
@@ -111,7 +111,7 @@ class Processor:
     def render(self):
         """
         Return the rendered result of a child object.
-        
+
         This method should be overwritten in any inheriting class to further
         validate and format the output.
         """
