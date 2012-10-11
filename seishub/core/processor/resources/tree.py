@@ -22,7 +22,6 @@ class ResourceTree(StaticFolder):
         StaticFolder.__init__(self, **kwargs)
         self.env = env
         self._registry = {}
-        self.public = True
 
     def putChild(self, path, obj):
         """

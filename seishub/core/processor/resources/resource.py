@@ -3,6 +3,7 @@
 General resource objects.
 """
 
+from seishub.core.auth import Authorization
 from seishub.core.exceptions import NotAllowedError
 from seishub.core.processor.interfaces import IResource, IStatical
 from seishub.core.util.path import splitPath
@@ -21,7 +22,8 @@ class Resource(object):
         self.folderish = True
         self.is_leaf = False
         self.hidden = kwargs.get('hidden', False)
-        self.public = kwargs.get('public', False)
+        # Default authorization only grants access to admins.
+        self.authorization = Authorization()
 
     def getMetadata(self):
         """

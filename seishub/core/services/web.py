@@ -54,17 +54,6 @@ class WebRequest(Processor, http.Request):
         self.default_pages = \
             self.env.config.getlist('web', 'default_pages') or DEFAULT_PAGES
 
-    def isAuthenticatedUser(self):
-        """
-        XXX: this will change soon!
-        """
-        try:
-            authenticated = self.env.auth.checkPassword(self.getUser(),
-                                                        self.getPassword())
-        except:
-            return False
-        return authenticated
-
     def getUser(self):
         return http.Request.getUser(self)
 
@@ -81,10 +70,16 @@ class WebRequest(Processor, http.Request):
         """
         Renders the requested resource returned from the self.process() method.
         """
-        # check for logout
+        self.env.log.debug("(Webservice) Requesting path '%s'" % self.path)
+
+        # Check for logout
+        # XXX: This will keep prompting the user to enter his credentials as it
+        # always keeps being redirected to /manage/logout but so far I found
+        # not workaround for this annoying issue.
         if self.path == '/manage/logout':
             self.authenticate()
             return
+
         # traverse the resource tree
         try:
             result = getChildForRequest(self.env.tree, self)
@@ -102,24 +97,41 @@ class WebRequest(Processor, http.Request):
         # set default HTTP headers
         self.setHeader('server', 'SeisHub ' + SEISHUB_VERSION)
         self.setHeader('date', http.datetimeToString())
+
         # result rendered?
         if result == server.NOT_DONE_YET:
             # resource takes care about rendering
             return
-
-        if not hasattr(result, "authorization"):
-            print "AAAAAHHHH: NEED AUTHORIZATION. FIX THIS:", result
-        else:
-            if not result.authorization["public"]:
-                if not self.isAuthenticatedUser():
+        # Check for permissions.
+        user = self.getUser()
+        if user:
+            password = self.getPassword()
+            try:
+                password_valid = self.env.auth.checkPassword(user, password)
+            except SeisHubError:
+                password_valid = False
+            if password_valid is not True:
+                self.authenticate()
+                return
+        # Admins can do everything. Otherwise check.
+        if not user or not self.env.auth.checkIsUserInGroup(user, "admin"):
+            auth = result.authorization
+            if not user:
+                if auth.is_authorized("read") is False:
+                    self.env.log.debug("(Webservice) Access denied. Not a"
+                        " public resource.")
                     self.authenticate()
                     return
-                user = self.getUser()
-                if not result.authorization["owner"] == user and \
-                    not self.env.auth.checkIsUserInGroup(user,
-                            result.authorization["group"]):
-                        self.authenticate()
-                        return
+            # Request authorization if the user is not authorized.
+            if auth.is_authorized("read", user=user,
+                    user_groups=self.env.auth.getUser(user).groups) is False:
+                self.env.log.debug(("(Webservice) Access denied. User '%s' not"
+                        " authorized!") %
+                    str(user))
+                self.authenticate()
+                return
+        self.env.log.debug("(Webservice) Access granted. User '%s' authorized."
+                % str(user))
 
         # check result and either render direct or in thread
         if IFileSystemResource.providedBy(result):

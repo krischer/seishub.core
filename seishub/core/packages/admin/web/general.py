@@ -383,6 +383,7 @@ class UsersPanel(Component):
             'institution': '',
             # By default, all users will be added to the 'users' group.
             'groups': 'users',
+            'user_is_active': False,
             # Sort users by id.
             'users': sorted(self.auth.users.values(), key=lambda x: x.id),
             # No action will simply render a list of all users.
@@ -408,6 +409,7 @@ class UsersPanel(Component):
             data["email"] = user.email
             data["institution"] = user.institution
             data["groups"] = user.groups
+            data["user_is_active"] = user.is_active
         return data
 
     def _addUser(self, args):
@@ -484,6 +486,11 @@ class UsersPanel(Component):
         data["email"] = args.get("email", [""])[0]
         data["institution"] = args.get("institution", [""])[0]
         data["groups"] = args.get("groups", [""])[0]
+        data["user_is_active"] = args.get("user_is_active", [""])[0]
+        if data["user_is_active"]:
+            data["user_is_active"] = True
+        else:
+            data["user_is_active"] = False
 
         # Some error checks.
         if not data["user_name"]:
@@ -513,7 +520,8 @@ class UsersPanel(Component):
                                  new_user_name=data["user_name"],
                                  real_name=data["real_name"], groups=groups,
                                  password=password, email=data["email"],
-                                 institution=data["institution"])
+                                 institution=data["institution"],
+                                 is_active=data["user_is_active"])
         except Exception, e:
             self.log.error("Error updating user '%s'" % data["old_user_name"],
                 e)

@@ -16,8 +16,6 @@ class MapperResource(Resource):
         Resource.__init__(self, **kwargs)
         self.is_leaf = True
         self.mapper = mapper
-        if hasattr(mapper, 'public'):
-            self.public = True
         if folderish:
             self.folderish = True
             self.category = 'mapping-folder'

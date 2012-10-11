@@ -25,10 +25,7 @@
   <div class="field">
     <label>Groups (seperated by commas)</label><br />
     <input type="text" size="80" name="groups" value="$groups" />
-  </div>
-  <div class="field">
-    <label>E-Mail</label><br />
-    <input type="text" size="80" name="email" value="$email" />
+  </div> <div class="field"> <label>E-Mail</label><br /> <input type="text" size="80" name="email" value="$email" />
   </div>
   <div class="field">
     <label>Institution</label><br />
@@ -80,6 +77,15 @@
     <label>Institution</label><br />
     <input type="text" size="80" name="institution" value="$institution" />
   </div>
+  <div class="field">
+    #if $user_is_active==True
+    <input type="checkbox" checked="checked" size="80" name="user_is_active" value="user_is_active" />
+    #else
+    <input type="checkbox" size="80" name="user_is_active" value="user_is_active" />
+    #end if
+
+    <label>User Is Active</label>
+  </div>
   <div class="button">
     <input type="submit" name="edit" value="Save" />
     <input type="submit" name="cancel" value="Cancel" />
@@ -95,7 +101,7 @@
 ## If no action is specified, render a list of all users and some buttons.
 
 #if not $action
-<h3 style="padding-bottom: 10pt">Users with administrative rights are highlighted.</h3>
+<h3 style="padding-bottom: 10pt">Users with administrative rights are highlighted. Inactive users are grayed out.</h3>
 <form method="post" id="list" action="">
   <table class="list">
     <tr>
@@ -106,9 +112,14 @@
       <th>E-Mail</th>
       <th>Institution</th>
       <th>Groups</th>
+      <th>Is Active</th>
+      <th>Last Login (UTC)</th>
+      <th>Date Joined (UTC)</th>
     </tr>
     #for $user in $users
-    #if 'admin' in $user.groups
+    #if $user.is_active==False
+    <tr style="background: #eee; color: #ccc">
+    #elif 'admin' in $user.groups
     <tr style="background: #F5A9A9">
     #else
     <tr>
@@ -126,6 +137,9 @@
       </td>
       <td>$user.institution</td>
       <td>$user.groups</td>
+      <td>$user.is_active</td>
+      <td>$user.last_login</td>
+      <td>$user.date_joined</td>
     </tr>
     #end for
   </table>

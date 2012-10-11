@@ -88,8 +88,7 @@ class FileSystemResource(Resource, filepath.FilePath):
         return self.__class__(path,
                               default_type=self.default_type,
                               registry=self.registry,
-                              processors=self.processors, hidden=self.hidden,
-                              public=self.public)
+                              processors=self.processors, hidden=self.hidden)
 
     def render_GET(self, request): #@UnusedVariable
         """
@@ -102,7 +101,7 @@ class FileSystemResource(Resource, filepath.FilePath):
             ids = sorted(self.listdir())
             children = {}
             for id in ids:
-                # IDs retrieved from listdir() are Unicode object 
+                # IDs retrieved from listdir() are Unicode object
                 safe_id = id.encode('UTF-8')
                 children[safe_id] = self._clone(self.child(id).path)
             # add dynamic children

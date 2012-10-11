@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
+from obspy.core import UTCDateTime
+import os
 from seishub.core.config import IntOption, Option
 from seishub.core.defaults import MIN_PASSWORD_LENGTH
 from seishub.core.exceptions import DuplicateObjectError, SeisHubError
 from seishub.core.util.text import hash
-from sqlalchemy import Column, String, create_engine, Integer
+from sqlalchemy import Column, String, create_engine, Integer, DateTime, \
+    Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from twisted.cred import checkers, credentials, error
 from twisted.internet import defer
 from zope.interface import implements
-import os
 
 
 class PasswordDictChecker:
@@ -57,6 +59,10 @@ class User(Base):
         groups:        A list of all groups the user is a member of.
         institution:   The user's institution.
         email:         The user's email.
+        date_joined:   Datetime at account creation time.
+        last_login:    Datetime of the user's last login.
+        is_active:     Boolean flag whether or not the user is considered to be
+                       active.
     """
     __tablename__ = 'users'
 
@@ -67,6 +73,9 @@ class User(Base):
     groups = Column(String)
     institution = Column(String)
     email = Column(String)
+    date_joined = Column(DateTime)
+    last_login = Column(DateTime)
+    is_active = Column(Boolean)
 
     def __init__(self, user_name, password_hash, real_name, groups,
         institution='', email=''):
@@ -76,6 +85,9 @@ class User(Base):
         self.groups = ", ".join(groups)
         self.institution = institution
         self.email = email
+        self.date_joined = UTCDateTime().datetime
+        self.last_login = None
+        self.is_active = True
 
     def __repr__(self):
         return "<User %s(%s), member of groups: %s>" % (self.user_name,
@@ -185,7 +197,6 @@ class AuthenticationManager(object):
         except Exception, e:
             session.rollback()
             raise SeisHubError(str(e))
-        print "Added user!"
         session.close()
         self.refresh()
 
@@ -270,16 +281,35 @@ class AuthenticationManager(object):
 
     def checkPassword(self, user_name, password):
         """
-        Check a user's password.
+        Check a user's password. Will also set the last login flag of the user
+        to the current time.
+        Will return False for inactive users!
         """
         return self.checkPasswordHash(user_name, hash(password))
 
     def checkPasswordHash(self, user_name, password_hash):
         """
-        Check a user's password hash.
+        Check a user's password hash. Will also set the last login flag of the
+        user to the current time.
+        Will return False for inactive users!
         """
         user = self.getUser(user_name)
-        return user.password_hash == password_hash
+        if not user.is_active:
+            return False
+        password_valid = password_hash == password_hash
+        if password_valid is True:
+            # Update the users last login time.
+            user.last_login = UTCDateTime().datetime
+            session = self.Session()
+            session.add(user)
+            try:
+                session.commit()
+            except Exception, e:
+                session.rollback()
+                raise SeisHubError(str(e))
+            session.close()
+            self.refresh()
+        return password_valid
 
     def changePassword(self, user_name, password):
         """
@@ -296,7 +326,8 @@ class AuthenticationManager(object):
         return self.users[user_name]
 
     def updateUser(self, user_name, new_user_name=None, password=None,
-        real_name=None, groups=None, institution=None, email=None):
+        real_name=None, groups=None, institution=None, email=None,
+        is_active=None):
         """
         Modifies user information. Should be self-explanatory.
         """
@@ -313,6 +344,8 @@ class AuthenticationManager(object):
             user.institution = institution
         if email:
             user.email = email
+        if is_active is not None:
+            user.is_active = bool(is_active)
         if groups:
             for group in groups:
                 if not group in self.groups.keys():
@@ -384,8 +417,10 @@ class Authorization(object):
         time this is the safe solution in case someone forgets to set
         permissions somewhere.
         """
-        self._read_actions = ["r", "read"]
-        self._write_actions = ["w", "write"]
+        self._read_actions = ("r", "read")
+        self._write_actions = ("w", "write")
+        self._read_write_actions = ("rw", "read-write", "read write",
+            "read-write")
         self.owner = owner
         self.group = group
         self.permissions = permissions
