@@ -46,9 +46,9 @@ class XmlDbManager(DbStorage):
     def modifyResource(self, old_resource, resource, uid=None):
         """
         Modify an existing resource.
-        
+
         In case of a version controlled resource a new revision is created.
-        XXX: new revisions are created always, whether or not the resource's 
+        XXX: new revisions are created always, whether or not the resource's
         document has actually changed -> compare old/new document ?
         """
         if not old_resource.resourcetype._id == resource.resourcetype._id:
@@ -89,11 +89,10 @@ class XmlDbManager(DbStorage):
         if name:
             name = str(name)
         try:
-            res = self.pickup(Resource, resourcetype=
-                              {'package': {'package_id':package_id},
-                               'resourcetype_id':resourcetype_id},
-                              name=name,
-                              _id=id, document=document)[0]
+            res = self.pickup(Resource,
+                resourcetype={'package': {'package_id': package_id},
+                    'resourcetype_id': resourcetype_id},
+                name=name, _id=id, document=document)[0]
         except IndexError:
             self._raise_not_found(package_id, resourcetype_id, name, id)
         return res
@@ -102,28 +101,28 @@ class XmlDbManager(DbStorage):
                     name=None, revision=None, document_id=None,
                     id=None):
         """
-        Get a specific resource from the database by either (package_id, 
+        Get a specific resource from the database by either (package_id,
         resourcetype_id, name) or by document_id
-        
+
         @param package_id: resourcetype id
         @param: resourcetype_id: package id
         @param name: Name of the resource
         @param revision: revision of related document (if no revision is given,
-            newest revision is used, to retrieve all revisions of a document  
+            newest revision is used, to retrieve all revisions of a document
             use getRevisions(...)
         @param document_id: get a resource by related document's id
         @param id: get a resource by it's unique id
         @return: Resource or None
         """
-        if not ((package_id and resourcetype_id and name) or id or\
+        if not ((package_id and resourcetype_id and name) or id or
                 document_id):
             raise TypeError("getResource(): Invalid number of arguments.")
         if document_id:
             try:
                 res = self.pickup(Resource,
-                                  document={'_id':document_id})[0]
+                                  document={'_id': document_id})[0]
             except IndexError, e:
-                raise NotFoundError("Resource not found. ('%s')" % \
+                raise NotFoundError("Resource not found. ('%s')" %
                                     (document_id), e)
             return res
         res = self._getResource(package_id, resourcetype_id, name,
@@ -133,9 +132,9 @@ class XmlDbManager(DbStorage):
     def getRevisions(self, package_id=None, resourcetype_id=None,
                      name=None, id=None):
         """
-        Get all revisions of the specified resource by either 
+        Get all revisions of the specified resource by either
         (package_id, resourcetype_id, name) or by id
-        
+
         @param package_id: package id
         @param resourcetype_id: resourcetype id
         @param name: name of the resource
@@ -148,12 +147,9 @@ class XmlDbManager(DbStorage):
             name = str(name)
         try:
             res = self.pickup(Resource,
-                              _order_by={'document':{'revision':'asc'}},
-                              resourcetype=
-                                {'package':{'package_id':package_id},
-                                 'resourcetype_id':resourcetype_id},
-                              name=name,
-                              _id=id)[0]
+                _order_by={'document': {'revision': 'asc'}},
+                resourcetype={'package': {'package_id': package_id},
+                'resourcetype_id': resourcetype_id}, name=name, _id=id)[0]
         except IndexError:
             self._raise_not_found(package_id, resourcetype_id, name, id)
         return res
@@ -163,16 +159,16 @@ class XmlDbManager(DbStorage):
         Get a list of resources for specified package_id and resourcetype_id.
         """
         res = self.pickup(Resource,
-                          resourcetype={'package':{'package_id':package_id},
-                                          'resourcetype_id':resourcetype_id},
-                          document=DB_LIMIT('revision', 'max'))
+        resourcetype={'package': {'package_id':package_id},
+            'resourcetype_id':resourcetype_id}, document=DB_LIMIT('revision',
+                'max'))
         return res
 
     def deleteResource(self, resource=None, resource_id=None):
         """
         Remove a resource by a specified Resource.
-        
-        Note: This method removes all revisions of a resource. To delete a 
+
+        Note: This method removes all revisions of a resource. To delete a
         single revision use the deleteRevision method.
         """
         if resource:
@@ -198,7 +194,7 @@ class XmlDbManager(DbStorage):
     def revertResource(self, package_id=None, resourcetype_id=None,
                        name=None, revision=None, id=None):
         """
-        Reverts the specified revision for the given resource by removing 
+        Reverts the specified revision for the given resource by removing
         all newer revisions than the specified one.
         """
         if not (revision and\

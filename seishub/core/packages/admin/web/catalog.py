@@ -181,7 +181,7 @@ class CatalogQueryPanel(Component):
 
     def render(self, request):
         data = {
-            'query': '/seishub/stylesheet order by media-type ASC ' + \
+            'query': '/seishub/stylesheet order by media-type ASC ' +
                      'limit 2 offset 5',
             'result': '',
             'rows': '',
@@ -292,7 +292,7 @@ class DatabaseStatusPanel(Component):
             # document_id
             oncl = tab.c['document_id'] == document_tab.c['id']
             query = sql.select([tab.c['document_id']],
-                               document_tab.c['id'] == None,
+                               document_tab.c['id'] is None,
                                [tab.outerjoin(document_tab, onclause=oncl)],
                                limit=20)
             ids = self.env.db.query(query).fetchall()
@@ -308,7 +308,7 @@ class DatabaseStatusPanel(Component):
         out += 'Table %s' % document_tab.name
         oncl = document_tab.c['resource_id'] == resource_tab.c['id']
         query = sql.select([document_tab.c['resource_id']],
-                           resource_tab.c['id'] == None,
+                           resource_tab.c['id'] is None,
                            [document_tab.outerjoin(resource_tab,
                                                    onclause=oncl)],
                            limit=20)
@@ -324,7 +324,7 @@ class DatabaseStatusPanel(Component):
         out += 'Table %s' % document_meta_tab.name
         oncl = document_meta_tab.c['id'] == document_tab.c['id']
         query = sql.select([document_meta_tab.c['id']],
-                           document_tab.c['id'] == None,
+                           document_tab.c['id'] is None,
                            [document_meta_tab.outerjoin(document_tab,
                                                         onclause=oncl)],
                            limit=20)
@@ -340,7 +340,7 @@ class DatabaseStatusPanel(Component):
         out += 'Table %s' % resource_tab.name
         oncl = resource_tab.c['resourcetype_id'] == resourcetypes_tab.c['id']
         query = sql.select([resource_tab.c['resourcetype_id']],
-                           resourcetypes_tab.c['id'] == None,
+                           resourcetypes_tab.c['id'] is None,
                            [resource_tab.outerjoin(resourcetypes_tab,
                                                    onclause=oncl)],
                            limit=20)
@@ -356,7 +356,7 @@ class DatabaseStatusPanel(Component):
         out += 'Table %s' % resourcetypes_tab.name
         oncl = resourcetypes_tab.c['package_id'] == packages_tab.c['id']
         query = sql.select([resourcetypes_tab.c['package_id']],
-                           packages_tab.c['id'] == None,
+                           packages_tab.c['id'] is None,
                            [resourcetypes_tab.outerjoin(packages_tab,
                                                         onclause=oncl)],
                            limit=20)
