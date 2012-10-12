@@ -70,7 +70,8 @@ class WebRequest(Processor, http.Request):
         """
         Renders the requested resource returned from the self.process() method.
         """
-        self.env.log.debug("(Webservice) Requesting path '%s'" % self.path)
+        self.env.log.debug("(Webservice) Requesting path '%s' (%s)" %
+            (self.path, self.method))
 
         # Check for logout
         # XXX: This will keep prompting the user to enter his credentials as it

@@ -57,6 +57,7 @@ class ComponentRegistry(DbStorage):
         Returns sorted list of all enabled package ids.
         """
         all = PackageManager.getPackageIds()
+
         enabled = [id for id in all if self.env.isComponentEnabled
                    (PackageManager.getClasses(IPackage, id)[0])]
         return sorted(enabled)
