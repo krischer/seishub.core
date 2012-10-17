@@ -22,6 +22,7 @@ def main():
             path = os.path.abspath(args[2])
             if os.path.isdir(path):
                 print('Error: path %s already exists!' % path)
+                sys.exit(1)
             else:
                 createApplication(path, create=True)
     else:
