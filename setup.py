@@ -48,7 +48,7 @@ setup(
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: ' + \
+        'License :: OSI Approved :: ' +
         'GNU Library or Lesser General Public License (LGPL)',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
@@ -69,9 +69,9 @@ setup(
         'pycrypto',
         'pyasn1',
         'pyparsing',
-        'obspy.core>0.7.0',
+        'obspy',
     ],
-    download_url="https://github.com/barsch/seishub.core/zipball/master" + \
+    download_url="https://github.com/barsch/seishub.core/zipball/master" +
         "#egg=seishub.core-dev",
     test_suite="seishub.core.test.suite",
     include_package_data=True,

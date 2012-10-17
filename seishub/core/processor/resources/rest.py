@@ -23,6 +23,16 @@ from zope.interface import implements
 class RESTResource(Resource):
     """
     A REST resource node.
+
+    Four HTTP methods can be used to manage the resources:
+
+    * GET: Return the given resource.
+    * PUT: Modify the given resource. XXX: Cannot be created here yet.
+    * MOVE: Move/rename a given resource.
+    * DELETE: Delete a given resource.
+
+    POST makes no sense for resources that already exists and is thus handled
+    by the RESTResourceTypeFolder.
     """
     implements(IRESTResource)
 
@@ -47,22 +57,27 @@ class RESTResource(Resource):
             self.res = res
             meta = self.res.document.meta
             self.meta = {
-                'meta_size': meta.size,
-                'meta_uid': meta.uid,
-                'meta_datetime': meta.datetime
+                "meta_size": meta.size,
+                "meta_last_modified": meta.last_modified,
+                "meta_owner_id": meta.owner_id,
+                "meta_group_id": meta.group_id,
+                "meta_permissions": meta.permissions,
+                "meta_public": meta.public
             }
         # set url
         self.url = "/xml/%s/%s/%s" % (self.package_id, self.resourcetype_id,
                                       self.name)
 
     def getMetadata(self):
-        temp = int(UTCDateTime(self.meta['meta_datetime']).timestamp)
+        temp = int(UTCDateTime(self.meta["meta_datetime"]).timestamp)
         return {
-            'permissions': 0100644,
-            'uid': self.meta['meta_uid'],
-            'size': self.meta['meta_size'],
-            'atime': temp,
-            'mtime': temp
+            "permissions": self.meta["meta_permissions"],
+            "owner_id": self.meta["meta_owner_id"],
+            "group_id": self.meta["meta_group_id"],
+            "public": self.meta["meta_public"],
+            "size": self.meta["meta_size"],
+            "atime": temp,
+            "mtime": temp
         }
 
     def _format(self, request, data):
@@ -99,18 +114,24 @@ class RESTResource(Resource):
             request.env.log.debug(msg % (format, request.path))
         return data
 
-    def _checkPermissions(self, request, permissions=755):
-        # authenticate
-        uid = request.getUser()
-        doc_uid = self.meta['meta_uid']
-        if not doc_uid:
-            return
-        if uid == doc_uid:
-            return
-        # check permission for local user
-        user = request.env.auth.getUser(uid)
-        if user.permissions < permissions:
-            raise UnauthorizedError()
+    def _checkPermissions(self, request):
+        """
+        Checks if the user is authorized for the requested action.
+        """
+        # Authenticate.
+        user = request.getUser()
+        password = request.getPassword()
+        is_pw_valid = self.env.auth.checkPassword(user, password)
+        if is_pw_valid is False:
+            raise UnauthorizedError
+        if self.method == "GET":
+            action = "read"
+        elif self.method in ["DELETE", "MOVE", "PUT"]:
+            action = "write"
+        is_authenticated = self.authorization.is_authorized(action, user,
+            self.env.auth.getUser(user).groups)
+        if not is_authenticated is True:
+            raise UnauthorizedError
 
     def render_GET(self, request):
         """
@@ -140,7 +161,7 @@ class RESTResource(Resource):
         # handle output/format conversion
         data = self._format(request, data)
         # set last-modified time
-        dt = UTCDateTime(self.res.document.meta.getDatetime())
+        dt = UTCDateTime(self.res.document.meta.last_modified)
         try:
             request.setLastModified(dt.timestamp)
         except:
@@ -182,10 +203,8 @@ class RESTResource(Resource):
         data = request.data
         # handle output/format conversion
         data = self._format(request, data)
-        # get UID
-        uid = request.getUser()
         # modify resource
-        request.env.catalog.modifyResource(self.res, data, uid=uid)
+        request.env.catalog.modifyResource(self.res, data)
         # resource successfully modified - set status code
         request.code = http.NO_CONTENT
         return ''
@@ -334,9 +353,13 @@ class RESTProperty(Resource):
             etree.SubElement(root, "resource_id").text = str(res._id)
             etree.SubElement(root, "revision").text = \
                 str(res.document.revision)
-            etree.SubElement(root, "uid").text = unicode(meta.uid)
-            etree.SubElement(root, "datetime").text = \
-                unicode(meta.datetime.isoformat())
+            etree.SubElement(root, "owner_id").text = unicode(meta.owner_id)
+            etree.SubElement(root, "group_id").text = unicode(meta.group_id)
+            etree.SubElement(root, "permissions").text = \
+                unicode(meta.permissions)
+            etree.SubElement(root, "public").text = unicode(meta.public)
+            etree.SubElement(root, "last_modified").text = \
+                unicode(meta.last_modified.isoformat())
             etree.SubElement(root, "size").text = unicode(meta.size)
             etree.SubElement(root, "hash").text = unicode(meta.hash)
             data = etree.tostring(root, pretty_print=True, encoding='utf-8')
@@ -376,8 +399,17 @@ class RESTProperty(Resource):
 class RESTResourceTypeFolder(Folder):
     """
     A REST resource type folder.
-    """
 
+    Only three HTTP methods are handled by it: POST, PUT, and GET.
+
+    POST and PUT are identical and are only used to create new resources in the
+    specified folder.
+
+    GET is used to get all resources and indexes of the specified resource
+    type, e.g. it returns the contents of the folder.
+
+    XXX: Handle authorization!
+    """
     def __init__(self, package_id, resourcetype_id, **kwargs):
         Folder.__init__(self, **kwargs)
         self.category = 'resourcetype'
@@ -474,8 +506,9 @@ class RESTResourceTypeFolder(Folder):
             name = request.postpath[0]
         else:
             name = None
-        # set uid
-        uid = request.getUser()
+
+        user_id, group_id = request.env.auth.getUserAndGroupIds(request.getUser())
+
         # parse request headers for output/format options
         data = request.data
         formats = request.args.get('format', []) or \
@@ -499,8 +532,8 @@ class RESTResourceTypeFolder(Folder):
                 request.env.log.debug(msg % format)
         # add a new resource
         res = request.env.catalog.addResource(self.package_id,
-                                              self.resourcetype_id,
-                                              data, uid=uid, name=name)
+                self.resourcetype_id, data, owner_id=user_id, name=name,
+                group_id=group_id)
         # resource created - set status code and location header
         request.code = http.CREATED
         url = "%s/%s/%s" % (request.env.getRestUrl(),

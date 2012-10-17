@@ -17,8 +17,8 @@ RESOURCE_TABLE = 'resource'
 
 def revision_default(ctx):
     resource_id = ctx.compiled_parameters[0]['resource_id']
-    q = text('SELECT coalesce(max(revision), 0) + 1 FROM ' + \
-             DEFAULT_PREFIX + DOCUMENT_TABLE + ' WHERE resource_id = %s' % \
+    q = text('SELECT coalesce(max(revision), 0) + 1 FROM ' +
+             DEFAULT_PREFIX + DOCUMENT_TABLE + ' WHERE resource_id = %s' %
              resource_id)
     return ctx.connection.scalar(q)
 
@@ -32,18 +32,22 @@ document_tab = Table(DEFAULT_PREFIX + DOCUMENT_TABLE, metadata,
     keep_existing=True,
 )
 
+# The metadata table for every resource!
 document_meta_tab = Table(DEFAULT_PREFIX + DOCUMENT_META_TABLE, metadata,
     Column('id', Integer, primary_key=True),
     Column('size', Integer),
-    Column('datetime', DateTime, default=datetime.utcnow,
+    Column('last_modified', DateTime, default=datetime.utcnow,
            onupdate=datetime.utcnow),
-    Column('uid', String(80)),
     Column('hash', String(56)),
+    Column('owner_id', Integer),
+    Column('group_id', Integer),
+    Column('permissions', String(3)),
+    Column('public', Boolean),
     keep_existing=True,
 )
 
 # XXX: sqlite does not support autoincrement on combined primary keys
-# default does not work on Text columns, that's why String is used for name col 
+# default does not work on Text columns, that's why String is used for name col
 resource_tab = Table(DEFAULT_PREFIX + RESOURCE_TABLE, metadata,
     Column('id', Integer, autoincrement=True, primary_key=True,
            default=text('(SELECT coalesce(max(id), 0) + 1 FROM ' + \

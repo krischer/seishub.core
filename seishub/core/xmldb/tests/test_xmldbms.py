@@ -74,7 +74,7 @@ class XmlDbManagerTest(SeisHubEnvironmentTestCase):
         except:
             print "Warning: Package %s could not be deleted during tear" \
                   " down." % (self.test_package.package_id)
-#            
+#
     def testUnversionedResource(self):
         #======================================================================
         # addResource()
@@ -84,8 +84,8 @@ class XmlDbManagerTest(SeisHubEnvironmentTestCase):
         self.assertRaises(InvalidParameterError, self.xmldbm.addResource,
                           empty)
         res1 = Resource(self.test_resourcetype,
-                        document=newXMLDocument(self.test_data,
-                                                  uid='testuser'))
+                        document=newXMLDocument(self.test_data, owner_id=12,
+                            group_id=34))
         otherpackage = self.env.registry.db_registerPackage("otherpackage")
         othertype = self.env.registry.db_registerResourceType("otherpackage",
                                                               "testml")
@@ -107,12 +107,16 @@ class XmlDbManagerTest(SeisHubEnvironmentTestCase):
         assert isinstance(result.document._data, DbAttributeProxy)
         self.assertEquals(result.name, str(res1.id))
         self.assertEquals(result.document.data, self.test_data)
-        self.assertTrue(result.document.meta.datetime)
+        self.assertTrue(result.document.meta.last_modified)
         self.assertEquals(result.document.meta.size,
                           len(self.test_data) + XML_DECLARATION_LENGTH)
         self.assertEquals(result.document.meta.hash,
                           hash(self.test_data))
-        self.assertEquals(result.document.meta.uid, 'testuser')
+        self.assertEquals(result.document.meta.owner_id, 12)
+        self.assertEquals(result.document.meta.group_id, 34)
+        # Check the default permissions and public flag.
+        self.assertEquals(result.document.meta.permissions, "600")
+        self.assertEquals(result.document.meta.public, False)
         self.assertEquals(result.package.package_id,
                           self.test_package.package_id)
         self.assertEquals(result.resourcetype.resourcetype_id,
@@ -121,7 +125,8 @@ class XmlDbManagerTest(SeisHubEnvironmentTestCase):
 
         result = self.xmldbm.getResource(id=res2.id)
         self.assertEquals(result.document.data, self.test_data)
-        self.assertEquals(result.document.meta.uid, None)
+        self.assertEquals(result.document.meta.owner_id, None)
+        self.assertEquals(result.document.meta.group_id, None)
         self.assertEquals(result.package.package_id,
                           otherpackage.package_id)
         self.assertEquals(result.resourcetype.resourcetype_id,
@@ -138,8 +143,13 @@ class XmlDbManagerTest(SeisHubEnvironmentTestCase):
                                          res1.resourcetype.resourcetype_id,
                                          id=res1.id)
         self.assertEquals(result.document.data, self.test_data_mod)
-        # user id is still the same
-        self.assertEquals(result.document.meta.uid, 'testuser')
+        # Check that user and group ids are still the same
+        self.assertEquals(result.document.meta.owner_id, 12)
+        self.assertEquals(result.document.meta.group_id, 34)
+        # The previously set default permissions should still stay the same if
+        # not explicitly changed.
+        self.assertEquals(result.document.meta.permissions, "600")
+        self.assertEquals(result.document.meta.public, False)
         self.assertEquals(result.package.package_id,
                           self.test_package.package_id)
         self.assertEquals(result.resourcetype.resourcetype_id,

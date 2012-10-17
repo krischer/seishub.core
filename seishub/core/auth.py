@@ -271,6 +271,19 @@ class AuthenticationManager(object):
             return True
         return False
 
+    def getUserAndGroupIds(self, user_name):
+        """
+        Convenience method to return the id of the user and the first item in
+        the group list.
+        """
+        try:
+            user = self.getUser(user_name)
+        # Return two empty strings if the user does not exist.
+        except SeisHubError:
+            return "", ""
+        # Return the user id and the id of the first group.
+        return user.id, self.getGroup(user.groups.split(",")[0]).id
+
     def getGroup(self, group_name):
         """
         Returns the Group instance of one user.
@@ -293,7 +306,10 @@ class AuthenticationManager(object):
         user to the current time.
         Will return False for inactive users!
         """
-        user = self.getUser(user_name)
+        try:
+            user = self.getUser(user_name)
+        except SeisHubError:
+            return False
         if not user.is_active:
             return False
         password_valid = password_hash == password_hash

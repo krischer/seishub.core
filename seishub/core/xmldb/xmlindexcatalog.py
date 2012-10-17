@@ -19,7 +19,6 @@ class _IndexView(object):
     Mixin for XMLIndexCatalog providing "horizontal" SQL views on the indexed
     data per resource type.
     """
-
     def updateIndexView(self, resourcetype):
         """
         Updates an index view of a resource type.
@@ -61,7 +60,7 @@ class _IndexView(object):
             msg = "XmlIndex objects must be from the same resource type."
             raise InvalidParameterError(msg)
         columns = [document_tab.c['id'].label("document_id"),
-            document_meta_tab.c['datetime'].label("document_last_modified")]
+            document_meta_tab.c['last_modified'].label("document_last_modified")]
         joins = document_tab.c['id'] == document_meta_tab.c['id']
         if not compact:
             # add also columns package_id and resourcetype_id and resource_name
@@ -350,15 +349,21 @@ class _QueryProcessor(object):
         limit = xpath.getLimit()
         offset = xpath.getOffset()
         # default columns: document_id, package, resourcetype, resource_name,
-        # size, uid, datetime
-        columns = [document_tab.c['id'].label("document_id"),
-                   packages_tab.c['name'].label("package_id"),
-                   resourcetypes_tab.c['name'].label("resourcetype_id"),
-                   resource_tab.c['name'].label("resource_name"),
-                   document_tab.c['revision'].label("revision"),
-                   document_meta_tab.c['size'].label('meta_size'),
-                   document_meta_tab.c['uid'].label('meta_uid'),
-                   document_meta_tab.c['datetime'].label('meta_datetime')]
+        # size, last_modified, owner_id, group_id, permissions, and public
+        columns = [document_tab.c["id"].label("document_id"),
+                   packages_tab.c["name"].label("package_id"),
+                   resourcetypes_tab.c["name"].label("resourcetype_id"),
+                   resource_tab.c["name"].label("resource_name"),
+                   document_tab.c["revision"].label("revision"),
+
+                   document_meta_tab.c["size"].label("meta_size"),
+                   document_meta_tab.c["last_modified"].label(
+                       "meta_last_modified"),
+                   document_meta_tab.c["owner_id"].label("meta_owner_id"),
+                   document_meta_tab.c["group_id"].label("meta_group_id"),
+                   document_meta_tab.c["permissions"].label(
+                       "meta_permissions"),
+                   document_meta_tab.c["public"].label("meta_public")]
         pkg, rt = location_path[0:2]
         # join default columns
         oncl = (resource_tab.c['id'] == document_tab.c['resource_id'])

@@ -179,16 +179,18 @@ class XmlCatalogTest(SeisHubEnvironmentTestCase):
     def test_IResourceManager(self):
         # add / get / delete a resource
         catalog = self.env.catalog
-        res = catalog.addResource(PID1, RID1, RAW_XML, uid='testuser',
-                                  name='testfilename.xml')
+        res = catalog.addResource(PID1, RID1, RAW_XML, owner_id=22,
+            group_id=33, name="testfilename.xml")
         r = catalog.getResource(PID1, RID1, res.name)
         self.assertEquals(RAW_XML, r.document.data)
-        self.assertEquals('testuser', r.document.meta.uid)
-        self.assertEquals('testfilename.xml', r.name)
+        self.assertEquals("testfilename.xml", r.name)
+        # Assert the metadata mapping.
+        self.assertEquals(22, r.document.meta.owner_id)
+        self.assertEquals(33, r.document.meta.group_id)
         # rename
-        catalog.renameResource(res, 'changed.xml')
-        r = catalog.getResource(PID1, RID1, 'changed.xml')
-        self.assertEquals('changed.xml', r.name)
+        catalog.renameResource(res, "changed.xml")
+        r = catalog.getResource(PID1, RID1, "changed.xml")
+        self.assertEquals("changed.xml", r.name)
         catalog.deleteResource(r)
         # list resources
         r = catalog.getAllResources(PID1, RID1)

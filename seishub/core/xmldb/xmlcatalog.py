@@ -16,7 +16,7 @@ import datetime
 class XmlCatalog(object):
     """
     The catalog object.
-    
+
     Use this class to manage all indexes and resources.
     """
     def __init__(self, env):
@@ -25,22 +25,36 @@ class XmlCatalog(object):
         self.index_catalog = XmlIndexCatalog(env.db, self.xmldb)
         self.index_catalog.env = env
 
-    def addResource(self, package_id, resourcetype_id, xml_data, uid=None,
-                    name=None):
+    def addResource(self, package_id, resourcetype_id, xml_data, owner_id=None,
+            group_id=None, name=None):
         """
         Add a new resource to the database.
-        
+
+        Per Default, permissions will be set to "600", meaning the owner can
+        read and write, group and others can do nothing. This is a safe
+        default - if it turns out inconvenient, it should be changed.
+
         @param package_id: package id
         @param resourcetype_id: resourcetype id
         @param xml_data: xml data
-        @param uid: user id of creator
+        @param owner_id: user id of creator/default owner of the resource
+        @param group_id: first group id of the creator
         @param name: optional resource name, defaults to unique integer id
         @return: Resource object
         """
         _, resourcetype = self.env.registry.objects_from_id(package_id,
                                                             resourcetype_id)
+        # Default values for owner and group are the admin.
+        admin_owner_id, admin_group_id = \
+            self.env.auth.getUserAndGroupIds("admin")
+        if owner_id is None:
+            owner_id = admin_owner_id
+        if group_id is None:
+            group_id = admin_group_id
+
         res = Resource(resourcetype,
-                       document=newXMLDocument(xml_data, uid=uid),
+                       document=newXMLDocument(xml_data, owner_id=owner_id,
+                           group_id=group_id),
                        name=name)
         # get xml_doc to ensure the document is parsed
         res.document.xml_doc
@@ -58,7 +72,7 @@ class XmlCatalog(object):
     def modifyResource(self, resource, xml_data, uid=None):
         """
         Modify the XML document of an already existing resource.
-        
+
         In case of a version controlled resource a new revision is created.
         """
         new_resource = Resource(resourcetype=resource.resourcetype,
@@ -79,10 +93,10 @@ class XmlCatalog(object):
         # create backup entry into the global trash folder
         if self.env.config.getbool('seishub', 'use_trash_folder', False):
             data = resource.document.data
-            # ensure we return a UTF-8 encoded string not an Unicode object 
+            # ensure we return a UTF-8 encoded string not an Unicode object
             if isinstance(data, unicode):
                 data = data.encode('utf-8')
-            # set XML declaration inclusive UTF-8 encoding string 
+            # set XML declaration inclusive UTF-8 encoding string
             if not data.startswith('<xml'):
                 data = addXMLDeclaration(data, 'utf-8')
             path = os.path.join(self.env.getInstancePath(), 'data', 'trash',
@@ -122,12 +136,12 @@ class XmlCatalog(object):
                     id=None):
         """
         Get a specific resource from the database.
-        
+
         @param package_id: resourcetype id
         @param: resourcetype_id: package id
         @param name: Name of the resource
         @param revision: revision of related document (if no revision is given,
-            newest revision is used, to retrieve all revisions of a document  
+            newest revision is used, to retrieve all revisions of a document
             use getRevisions()
         """
         return self.xmldb.getResource(package_id=package_id,
@@ -140,12 +154,12 @@ class XmlCatalog(object):
     def getRevisions(self, package_id, resourcetype_id, name):
         """
         Get all revisions of the specified resource.
-        
-        The Resource instance returned will contain a list of documents sorted 
+
+        The Resource instance returned will contain a list of documents sorted
         by revision (accessible as usual via Resource.document).
-        Note: In case a resource does not provide multiple revisions, this is 
+        Note: In case a resource does not provide multiple revisions, this is
         the same as a call to XmlCatalog.getResource(...).
-        
+
         @param package_id: package id
         @param resourcetype_id: resourcetype id
         @param name: name of the resource
@@ -158,20 +172,20 @@ class XmlCatalog(object):
         Get a list of resources for specified package and resourcetype.
         """
         return self.xmldb.getAllResources(package_id, resourcetype_id)
-#    
+#
 #    def revertResource(self, package_id, resourcetype_id, name, revision):
 #        """
 #        Reverts the specified revision for the given resource.
-#        
+#
 #        All revisions newer than the specified one will be removed.
 #        """
-#        return self.xmldb.revertResource(package_id, resourcetype_id, name, 
+#        return self.xmldb.revertResource(package_id, resourcetype_id, name,
 #                                         revision)
 
     def validateResource(self, resource):
         """
         Do a schema validation of a given resource.
-        
+
         This validates against all schemas of the corresponding resourcetype.
         """
         pid = resource.package.package_id
@@ -190,7 +204,7 @@ class XmlCatalog(object):
                       options=None):
         """
         Register an index.
-        
+
         @param type: "text" | "numeric" | "float" | "datetime" | "boolean" |
                      "date" | "integer" | "timestamp"
         """
@@ -273,7 +287,7 @@ class XmlCatalog(object):
     def getIndexData(self, resource):
         """
         Return indexed data for a given Resource as dictionary.
-        
+
         @param resource: resource
         @type resource: L{seishub.xmldb.interfaces.IResource}
         """
@@ -294,28 +308,28 @@ class XmlCatalog(object):
     def query(self, query, full=False):
         """
         Query the catalog via restricted XPath queries.
-        
+
         The values returned depend on the type of query:
-        
-        Is the location path of a query on resource level, i.e. on rootnode or 
-        above (e.g. '/package/resourcetype/*'), ALL indexes known for that 
+
+        Is the location path of a query on resource level, i.e. on rootnode or
+        above (e.g. '/package/resourcetype/*'), ALL indexes known for that
         resource are requested and returned as a dict.
-        
+
         Does the location path address a node other than the rootnode (e.g.
         '/package/resourcetype/rootnode/node1/node2'), indexed data for that
-        node ONLY is returned. 
-        Note: The index '/package/resourcetype/rootnode/node1/node2' has to 
-        exist, of course. 
-        
-        The result set is a dict of the form {document_ids : {xpath:value}, 
-        ...}. 
+        node ONLY is returned.
+        Note: The index '/package/resourcetype/rootnode/node1/node2' has to
+        exist, of course.
+
+        The result set is a dict of the form {document_ids : {xpath:value},
+        ...}.
         There is an additional key 'ordered' containing an ORDERED list of
         document ids, which is of interest in case there is an order by clause,
         as the dict itself does not preserve order.
-        
-        For further detail on the restricted XPath query syntax, see 
+
+        For further detail on the restricted XPath query syntax, see
         L{seishub.xmldb.xpath}
-        
+
         @param query: Restricted XPath query to be executed.
         @type query: basestring
         @param full: If True, picks the resource objects for the results

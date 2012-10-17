@@ -1,78 +1,73 @@
 # -*- coding: utf-8 -*-
 
 from seishub.core.core import implements
-from seishub.core.db.orm import Serializable, Relation, db_property, LazyAttribute
+from seishub.core.db.orm import Serializable, Relation, db_property, \
+    LazyAttribute
 from seishub.core.exceptions import InvalidParameterError
 from seishub.core.registry.package import ResourceTypeWrapper
 from seishub.core.util.text import hash, validate_id
-from seishub.core.util.xml import toUnicode, parseXMLDeclaration, addXMLDeclaration
+from seishub.core.util.xml import toUnicode, parseXMLDeclaration, \
+    addXMLDeclaration
 from seishub.core.util.xmlwrapper import IXmlDoc, XmlTreeDoc
 from seishub.core.xmldb.defaults import resource_tab, document_tab, \
     document_meta_tab
-from seishub.core.xmldb.interfaces import IResource, IXmlDocument, IDocumentMeta
+from seishub.core.xmldb.interfaces import IResource, IXmlDocument, \
+    IDocumentMeta
 
 
 XML_DECLARATION_LENGTH = len(addXMLDeclaration(""))
 
 
 class DocumentMeta(Serializable):
-    """contains document specific metadata;
-    such as: size, datetime, hash, user_id
     """
+    Every XML resource, here called XMLDocument, has an associated entry in the
+    `document_meta_tab` table. It stores the metadata for the resource, that is
+    all information that is not directly related to the file itself. Currently
+    it stores the following fields (some optional) for every resource:
 
-    implements (IDocumentMeta)
+        * id: Unique id of the document in the `document` table.
+        * size: Size of the resource in bytes.
+        * last_modified: Time of creation/last modification.
+        * hash: Hash of the actual resource.
+        * owner_id: Unique id of the owner of the resource.
+        * group_id: Unique id of the group of the resource.
+        * permissions: Permissions of the file.
+        * public: Boolean flag whether or not the resource is public.
+    """
+    implements(IDocumentMeta)
 
     db_table = document_meta_tab
 
     db_mapping = {
-        '_id':'id',
-        'uid':'uid',
-        'datetime':'datetime',
-        'size':'size',
-        'hash':'hash'
-    }
+        "_id": "id",
+        "size": "size",
+        "last_modified": "last_modified",
+        "hash": "hash",
+        "owner_id": "owner_id",
+        "group_id": "group_id",
+        "permissions": "permissions",
+        "public": "public"}
 
-    def __init__(self, uid=None, datetime=None, size=None, hash=None):
-        self.uid = uid
-        self.datetime = datetime
+    def __init__(self, size=None, last_modified=None, hash=None, owner_id=None,
+        group_id=None, permissions=None, public=None):
+        """
+        Very simple init just setting the attributes. The object relational
+        mapping from SQLAlchemy takes care of the rest.
+        """
         self.size = size
+        self.last_modified = last_modified
         self.hash = hash
-
-    def getUID(self):
-        return self._uid
-
-    def setUID(self, value):
-        if value and not isinstance(value, basestring):
-            raise TypeError('User id has to be a basestring.')
-        self._uid = value
-
-    uid = property(getUID, setUID, 'User id of document creator')
-
-    def getDatetime(self):
-        return self._datetime
-
-    def setDatetime(self, value):
-        self._datetime = value
-
-    datetime = property(getDatetime, setDatetime,
-                        'Last modification date')
-
-    def getSize(self):
-        return self._size
-
-    def setSize(self, value):
-        self._size = value
-
-    size = property(getSize, setSize, 'Size of xml document (read-only)')
-
-    def getHash(self):
-        return self._hash
-        #return sha.sha(self.data).hexdigest()
-
-    def setHash(self, value):
-        self._hash = value
-
-    hash = property(getHash, setHash, 'Document hash (read-only)')
+        self.owner_id = owner_id
+        self.group_id = group_id
+        # Set default permissions and public flag.
+        if permissions is None:
+            self.permissions = "600"
+        else:
+            self.permissions = permissions
+        if public is None:
+            self.public = False
+        else:
+            self.public = bool(public)
 
 
 class XmlDocument(Serializable):
@@ -80,27 +75,31 @@ class XmlDocument(Serializable):
     Auto-parsing XML resource.
 
     Given xml data gets validated and parsed on resource creation.
-    """
 
-    implements (IXmlDocument)
+    Per Default, permissions will be set to "600", meaning the owner can read
+    and write, group and others can do nothing. This is a safe default - if it
+    turns out inconvenient, it should be changed.
+    """
+    implements(IXmlDocument)
 
     db_table = document_tab
-    db_mapping = {'_id':'id',
-                  'revision':'revision',
-                  'data':LazyAttribute('data'),
-                  'meta':Relation(DocumentMeta, 'id', cascading_delete=True,
-                                  lazy=False)
-                  }
+    db_mapping = {"_id": "id",
+                  "revision": "revision",
+                  "data": LazyAttribute("data"),
+                  "meta": Relation(DocumentMeta, "id", cascading_delete=True,
+                                  lazy=False)}
 
-    def __init__(self, data=None, revision=None, uid=None): #@UnusedVariable
+    def __init__(self, data=None, revision=None, owner_id=None, group_id=None):
         self._xml_doc = None
-        self.meta = DocumentMeta(uid=uid)
+        self.meta = DocumentMeta(owner_id=owner_id, group_id=group_id)
         self.data = data
         # self.datetime = None
         Serializable.__init__(self)
 
     def setData(self, data):
-        """set data, convert to unicode and remove XML declaration"""
+        """
+        set data, convert to unicode and remove XML declaration
+        """
         if not data or data == "":
             self._data = None
             return
@@ -109,8 +108,8 @@ class XmlDocument(Serializable):
         # encode "utf-8" to determine hash and size
         raw_data = data.encode("utf-8")
         self._data = data
-        self.meta._size = len(raw_data) + XML_DECLARATION_LENGTH
-        self.meta._hash = hash(raw_data)
+        self.meta.size = len(raw_data) + XML_DECLARATION_LENGTH
+        self.meta.hash = hash(raw_data)
 
     def getData(self):
         """Returns data as unicode object."""
@@ -243,13 +242,16 @@ class Resource(Serializable):
     name = property(getName, setName, "Alphanumeric name (optional)")
 
 
-def newXMLDocument(data, id=None, uid=None):
+def newXMLDocument(data, id=None, owner_id=None, group_id=None):
     """
     Returns a new XmlDocument object.
 
     Data will be converted to unicode and a possible XML declaration will be
-    removed. Use this method whenever you wish to create a XmlDocument 
+    removed. Use this method whenever you wish to create a XmlDocument
     manually!
+
+    :param owner_id: User id of the resource owner.
+    :param group_id: Group id of the resource.
     """
     # check for data
     if len(data) == 0:
@@ -259,4 +261,4 @@ def newXMLDocument(data, id=None, uid=None):
         data, _ = parseXMLDeclaration(data, remove_decl=True)
     else:
         data, _ = toUnicode(data, remove_decl=True)
-    return XmlDocument(data, id, uid)
+    return XmlDocument(data, id, owner_id=owner_id, group_id=group_id)
