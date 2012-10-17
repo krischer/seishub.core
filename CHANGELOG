@@ -1,0 +1,23 @@
+1.4.0:
+    * The "seishub-admin initenv" command now uses an absolute path so it can
+      be started from everywhere.
+    * Per document metadata used to be size, hash, uid, datetime. This is now
+      changed to size, hash, last_modified, owner_id, group_id, permissions,
+      and public to be able to implement a granular authentication scheme.
+    * Authentication has a new table: groups. Used to keep track of groups. Two
+      groups are created by default: `admin` and `users`.
+    * Every user can now be part of one or more groups. Furthermore every user
+      now has an 'is_active' flag to be able to temporarily disable users.
+    * Users now have a 'date_joined' field and a 'last_login' field.
+    * Updated the admin web interface to reflect the changes to users and
+      groups.
+    * Lots of PEP8 fixes and formatting changes.
+    * A number of minor bugfixes and getting rid of old balast.
+    * Authentication object in seishub.core.auth dealing with user and group
+      authorization + tests.
+    * New requirements.txt for use with pip.
+    * Changed the HTTP Code for the DuplicateObjectError to 409. See
+      http://stackoverflow.com/questions/3290182/rest-http-status-codes for the
+      reasoning.
+    * Properly passing on the HTTP Error Codes to the HTTP responses after
+      catching exceptions.
