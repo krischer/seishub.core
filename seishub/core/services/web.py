@@ -9,7 +9,7 @@ from seishub.core.defaults import HTTP_PORT, HTTPS_PORT, HTTPS_CERT_FILE, \
     HTTPS_PKEY_FILE, HTTP_LOG_FILE, ADMIN_THEME, DEFAULT_PAGES, ADMIN_TITLE, \
     HTTPS_LOG_FILE
 from seishub.core.exceptions import InternalServerError, ForbiddenError, \
-    SeisHubError
+    SeisHubError, DuplicateObjectError
 from seishub.core.processor import Processor, HEAD, getChildForRequest
 from seishub.core.processor.interfaces import IFileSystemResource, IResource, \
     IStatical, IRESTResource
@@ -169,6 +169,7 @@ class WebRequest(Processor, http.Request):
         msg = "I don't know how to handle this resource type %s"
         raise InternalServerError(msg % type(result))
 
+
     def _cbSuccess(self, result):
         """
         The callback function for a deferred thread in case of success.
@@ -192,7 +193,7 @@ class WebRequest(Processor, http.Request):
         """
         if not isinstance(failure, Failure):
             raise
-        if 'seishub.exceptions.SeisHubError' not in failure.parents:
+        if 'seishub.core.exceptions.SeisHubError' not in failure.parents:
             # we got something unhandled
             self.env.log.error(failure.getTraceback())
             self.setResponseCode(http.INTERNAL_SERVER_ERROR)
