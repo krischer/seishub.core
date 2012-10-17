@@ -9,7 +9,7 @@ from seishub.core.defaults import HTTP_PORT, HTTPS_PORT, HTTPS_CERT_FILE, \
     HTTPS_PKEY_FILE, HTTP_LOG_FILE, ADMIN_THEME, DEFAULT_PAGES, ADMIN_TITLE, \
     HTTPS_LOG_FILE
 from seishub.core.exceptions import InternalServerError, ForbiddenError, \
-    SeisHubError, DuplicateObjectError
+    SeisHubError
 from seishub.core.processor import Processor, HEAD, getChildForRequest
 from seishub.core.processor.interfaces import IFileSystemResource, IResource, \
     IStatical, IRESTResource

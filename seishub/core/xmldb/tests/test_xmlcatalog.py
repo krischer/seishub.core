@@ -163,13 +163,13 @@ class XmlCatalogTest(SeisHubEnvironmentTestCase):
             catalog.renameResource(res1, 'test2.xml')
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEquals(e.code, http.FORBIDDEN)
+            self.assertEquals(e.code, http.CONFLICT)
         # rename res2 to existing name
         try:
             catalog.renameResource(res2, 'test.xml')
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEquals(e.code, http.FORBIDDEN)
+            self.assertEquals(e.code, http.CONFLICT)
         # rename to same name should work
         catalog.renameResource(res1, 'test.xml')
         # clean up
@@ -423,35 +423,35 @@ class XmlCatalogTest(SeisHubEnvironmentTestCase):
                                            "/station/XY")
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEquals(e.code, http.FORBIDDEN)
+            self.assertEquals(e.code, http.CONFLICT)
         # add same index again w/ grouping element
         try:
             self.env.catalog.registerIndex("package", "rt", "lon",
                                            "/station#lon")
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEquals(e.code, http.FORBIDDEN)
+            self.assertEquals(e.code, http.CONFLICT)
         # add index again with different label
         try:
             self.env.catalog.registerIndex("package", "rt", "otherlabel",
                                            "/station#lon")
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEquals(e.code, http.FORBIDDEN)
+            self.assertEquals(e.code, http.CONFLICT)
         # add index again with different label and no grouping (same xpath)
         try:
             self.env.catalog.registerIndex("package", "rt", "otherlabel",
                                            "/station/lon")
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEquals(e.code, http.FORBIDDEN)
+            self.assertEquals(e.code, http.CONFLICT)
         # add index with already existing label but other xpath
         try:
             self.env.catalog.registerIndex("package", "rt", "xy",
                                            "/station/lat")
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEquals(e.code, http.FORBIDDEN)
+            self.assertEquals(e.code, http.CONFLICT)
         # remove everything
         self.env.catalog.deleteAllIndexes("package", "rt")
         self.env.registry.db_deleteResourceType("package", "rt")

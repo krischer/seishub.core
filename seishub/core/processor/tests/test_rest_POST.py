@@ -121,7 +121,7 @@ class RestPOSTTests(SeisHubEnvironmentTestCase):
 
     def test_putOnExistingResource(self):
         """
-        Put request on an already existing resource.
+        Post request on an already existing resource.
         """
         proc = Processor(self.env)
         # create resource
@@ -131,7 +131,7 @@ class RestPOSTTests(SeisHubEnvironmentTestCase):
             proc.run(POST, '/put-test/notvc/test.xml', StringIO(XML_DOC))
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEqual(e.code, http.FORBIDDEN)
+            self.assertEqual(e.code, http.CONFLICT)
         # delete resource
         proc.run(DELETE, '/put-test/notvc/test.xml')
 
@@ -148,7 +148,7 @@ class RestPOSTTests(SeisHubEnvironmentTestCase):
             proc.run(POST, '/put-test/vc/test.xml', StringIO(XML_DOC))
             self.fail("Expected SeisHubError")
         except SeisHubError, e:
-            self.assertEqual(e.code, http.FORBIDDEN)
+            self.assertEqual(e.code, http.CONFLICT)
         # delete resource
         proc.run(DELETE, '/put-test/vc/test.xml')
 
@@ -167,7 +167,7 @@ class RestPOSTTests(SeisHubEnvironmentTestCase):
     def test_putUTF8EncodedDocuments(self):
         """
         Tests from a UTF-8 conformance test suite by M. Kuhn and M. Duerst.
-        
+
         @see: L{http://www.w3.org/2001/06/utf-8-test/}.
         """
         proc = Processor(self.env)
@@ -186,10 +186,10 @@ class RestPOSTTests(SeisHubEnvironmentTestCase):
     def test_putJapaneseXMLDocuments(self):
         """
         Part of the W3C XML conformance test suite.
-        
-        This covers tests with different encoding and byte orders, e.g. UTF-16 
-        with big and little endian. 
-        
+
+        This covers tests with different encoding and byte orders, e.g. UTF-16
+        with big and little endian.
+
         @see: L{http://www.w3.org/XML/Test/}.
         """
         proc = Processor(self.env)
