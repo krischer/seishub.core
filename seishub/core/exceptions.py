@@ -34,31 +34,32 @@ class SeisHubError(Exception):
 
 
 class UnauthorizedError(SeisHubError):
-    code = http.UNAUTHORIZED # 401
+    code = http.UNAUTHORIZED  # 401
 
 
 class InternalServerError(SeisHubError):
-    code = http.INTERNAL_SERVER_ERROR # 500
+    code = http.INTERNAL_SERVER_ERROR  # 500
 
 
 class NotFoundError(SeisHubError):
-    code = http.NOT_FOUND # 404
+    code = http.NOT_FOUND  # 404
 
 
 class DeletedObjectError(SeisHubError):
-    code = http.GONE # 410
+    code = http.GONE  # 410
 
 
 class DuplicateObjectError(SeisHubError):
-    code = http.FORBIDDEN # 403
+    # See: http://stackoverflow.com/questions/3290182/rest-http-status-codes
+    code = http.CONFLICT  # 409
 
 
 class InvalidObjectError(SeisHubError):
-    code = http.CONFLICT # 409
+    code = http.CONFLICT  # 409
 
 
 class InvalidParameterError(SeisHubError):
-    code = http.BAD_REQUEST # 400
+    code = http.BAD_REQUEST  # 400
 
 
 class ForbiddenError(SeisHubError):
