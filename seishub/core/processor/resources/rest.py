@@ -62,14 +62,14 @@ class RESTResource(Resource):
                 "meta_owner_id": meta.owner_id,
                 "meta_group_id": meta.group_id,
                 "meta_permissions": meta.permissions,
-                "meta_public": meta.public
+                "meta_public": meta.public,
             }
         # set url
         self.url = "/xml/%s/%s/%s" % (self.package_id, self.resourcetype_id,
                                       self.name)
 
     def getMetadata(self):
-        temp = int(UTCDateTime(self.meta["meta_datetime"]).timestamp)
+        temp = int(UTCDateTime(self.meta["meta_last_modified"]).timestamp)
         return {
             "permissions": self.meta["meta_permissions"],
             "owner_id": self.meta["meta_owner_id"],
