@@ -312,7 +312,7 @@ class AuthenticationManager(object):
             return False
         if not user.is_active:
             return False
-        password_valid = password_hash == password_hash
+        password_valid = password_hash == user.password_hash
         if password_valid is True:
             # Update the users last login time.
             user.last_login = UTCDateTime().datetime
