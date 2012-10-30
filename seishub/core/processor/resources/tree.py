@@ -22,6 +22,10 @@ class ResourceTree(StaticFolder):
         StaticFolder.__init__(self, **kwargs)
         self.env = env
         self._registry = {}
+        # The root resource tree can be read by everyone and noone can write to
+        # it. It furthermore is a public resource.
+        self.authorization.permissions = "444"
+        self.authorization.public = True
 
     def putChild(self, path, obj):
         """

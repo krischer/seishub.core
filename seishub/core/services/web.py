@@ -117,20 +117,21 @@ class WebRequest(Processor, http.Request):
         # Admins can do everything. Otherwise check.
         if not user or not self.env.auth.checkIsUserInGroup(user, "admin"):
             auth = result.authorization
+
             if not user:
                 if auth.is_authorized("read") is False:
                     self.env.log.debug("(Webservice) Access denied. Not a"
                         " public resource.")
                     self.authenticate()
                     return
-            # Request authorization if the user is not authorized.
-            if auth.is_authorized("read", user=user,
+            else:
+                # Request authorization if the user is not authorized.
+                if auth.is_authorized("read", user=user,
                     user_groups=self.env.auth.getUser(user).groups) is False:
-                self.env.log.debug(("(Webservice) Access denied. User '%s' not"
-                        " authorized!") %
-                    str(user))
-                self.authenticate()
-                return
+                    self.env.log.debug(("(Webservice) Access denied. User '%s'"
+                        " not authorized!") % str(user))
+                    self.authenticate()
+                    return
         self.env.log.debug("(Webservice) Access granted. User '%s' authorized."
                 % str(user))
 
@@ -168,7 +169,6 @@ class WebRequest(Processor, http.Request):
             return server.NOT_DONE_YET
         msg = "I don't know how to handle this resource type %s"
         raise InternalServerError(msg % type(result))
-
 
     def _cbSuccess(self, result):
         """
