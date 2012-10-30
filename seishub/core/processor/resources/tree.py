@@ -79,7 +79,11 @@ class ResourceTree(StaticFolder):
         res = AdminRootFolder(self.env, hidden=True)
         self.putChild('manage', res)
         # set XML resource root folder
-        self.putChild('xml', RESTFolder())
+        xml_folder = RESTFolder()
+        # Everyone can read the root xml folder.
+        xml_folder.authorization.permissions = "444"
+        xml_folder.authorization.public = True
+        self.putChild('xml', xml_folder)
         # set favicon.ico
         res = self.children['manage'].children['favicon.ico']
         self.putChild('favicon.ico', res)
