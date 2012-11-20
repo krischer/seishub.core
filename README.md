@@ -1,3 +1,5 @@
+[![Build Status](https://secure.travis-ci.org/barsch/seishub.core.png?branch=master)](https://travis-ci.org/barsch/seishub.core)
+
 Welcome to SeisHub
 ==================
 
@@ -69,17 +71,12 @@ Easy Install is a powerful command-line based package management tool for Python
     easy_install pyasn1
     easy_install lxml               # Linux requires libxml2-dev and libxslt-dev
     easy_install pyOpenSSL          # Linux requires libssl-dev
-    easy_install obspy.core
-
-The seismology plug-in in SeisHub requires the following additional modules:
-
     easy_install numpy              # see link in Notes
+    easy_install obspy
+
+The [seismology plug-in](https://github.com/barsch/seishub.plugins.seismology) requires the following additional modules:
+
     easy_install matplotlib
-    easy_install obspy.imaging
-    easy_install obspy.mseed
-    easy_install obspy.xseed
-    easy_install obspy.arclink
-    easy_install obspy.db
 
 ###### Notes ######
 
@@ -98,6 +95,7 @@ For [PostgreSQL](http://www.postgresql.org/) additional database bindings are re
     easy_install psycopg2           # Linux requires libpq-dev
 
 ###### Notes ######
+* On Debian/Ubuntu install *python-psycopg2* via package management
 * Windows binary packages for *psycopg2* can be found at http://www.stickpeople.com/projects/python/win-psycopg/
 
 ### SeisHub ###
@@ -143,4 +141,4 @@ Using PostgreSQL as default database backend requires a few more additional step
 
 4. Logout
 
-After creating the user and database you may use the connection string `postgres://username:password@host:port/databasename`.
+After creating the user and database you may use the connection string `postgresql://username:password@host:port/databasename` (postgres default port is `5432`).
