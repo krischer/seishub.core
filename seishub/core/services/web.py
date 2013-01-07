@@ -70,8 +70,54 @@ class WebRequest(Processor, http.Request):
         """
         Renders the requested resource returned from the self.process() method.
         """
-        self.env.log.debug("(Webservice) Requesting path '%s' (%s)" %
+        self.env.log.debug("(Webservice) Requesting path '%s' (Method: %s)" %
             (self.path, self.method))
+
+        # Set the access control header to allow cross origin XMLHttpRequests
+        # for all resources.
+        self.setHeader("Access-Control-Allow-Origin", "*")
+
+        # Modern browsers adhere to the same origin policy. This can be
+        # circumvented to a certain degree by correctly responding to
+        # XMLHttpRequest OPTIONS requests. All AJAX requests from other domains
+        # will be allowed. The goal is to be as permissive as possible
+        if self.method == "OPTIONS":
+            # Shortcut name
+            h_name = "access-control-request-headers"
+            if self.requestHeaders.hasHeader(h_name) and \
+                "origin" in \
+                self.requestHeaders.getRawHeaders(h_name)[0]:
+                # Set correct headers, response code, and return.
+                self.setResponseCode(200, "Cross site access granted.")
+                self.setHeader("Access-Control-Allow-Headers",
+                    "X-Requested-With, X-File-Size, X-File-Name, X-File-Type, "
+                    "authorization, content-type")
+                self.setHeader("Access-Control-Allow-Methods", "POST, PUT, "
+                    "GET, DELETE")
+                self.setHeader("Access-Control-Max-Age", "60")
+                self.write('')
+                self.finish()
+                return
+
+        # Handle 'multipart/form-data' content types.
+        # See http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2
+        if self.requestHeaders.hasHeader("content-type") and \
+            self.requestHeaders.getRawHeaders("content-type")[0].startswith(
+                "multipart/form-data; boundary="):
+            boundary = self.requestHeaders.getRawHeaders("content-type")[0]\
+                .split("boundary=")[1]
+            # The actual boundary is prepended with "--"
+            boundary = "--" + boundary
+            _, _, content, _ = self.data.split(boundary)
+            #  The content can be prepended by Content-Disposition,
+            #  Content-Type, or Content-Transfer-Encoding headers. Remove
+            #  these.
+            content = content.strip().split("\n")
+            for _i, line in enumerate(content):
+                if line and line.startswith("Content-"):
+                    continue
+                self.data = "\n".join(content[_i:]).strip()
+                break
 
         # Check for logout
         # XXX: This will keep prompting the user to enter his credentials as it
